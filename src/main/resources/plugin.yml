@@ -1,0 +1,6 @@
+name: ${project.name}
+version: ${project.version}
+main: ${main.class}
+author: InfinityFactions
+
+api-version: 1.13

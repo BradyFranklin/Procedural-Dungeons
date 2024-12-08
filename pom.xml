@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<modelVersion>4.0.0</modelVersion>
+
+<!--
+   We use Maven to build our plugin and Maven uses pom.xml to configure
+   itself.
+
+   This file is the heart and matter of everything that has to do
+   with how your plugin connects with other libraries and exports itself
+   when you want to publish it.
+
+   Please only edit options below, as the above declaration is machine
+   generated and not intended for user changes.
+-->
+
+<!-- ############################################################################### -->
+<!-- Basic plugin configuration, start here -->
+<!-- ############################################################################### -->
+
+<!--
+   The Group ID represents the main package of your plugin
+
+   The Artifact ID represents the name of your plugin.
+   Traditionally, it is suggested to keep this name lowercase.
+   If your plugin uses spaces, please replace them with dashes (-) instead.
+
+   The Name represents the full name of your plugin
+
+   The Version is current version of your plugin. You want to update this continuously
+-->
+
+<groupId>org.ninenetwork</groupId>
+<artifactId>infinitedungeons</artifactId>
+<name>InfiniteDungeons</name>
+<version>1.0.0</version>
+
+<packaging>jar</packaging>
+
+<!-- ############################################################################### -->
+
+<!--
+   Configure some of the Maven settings. We also define
+   our new variables here such as the main class or Java version
+   for our plugin.
+
+   You can use those variables in your src/resources folder. See
+   plugin.yml folder there for example usage.
+-->
+
+<properties>
+    <author>InfinitySB</author>
+    <main.class>org.ninenetwork.infinitedungeons.InfiniteDungeonsPlugin</main.class>
+    <java.version>1.8</java.version>
+    <foundation.version>6.6.4</foundation.version>
+    <foundation.path>com.github.kangarko</foundation.path>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <remapped.version>1.20.4-R0.1-SNAPSHOT</remapped.version>
+</properties>
+
+<repositories>
+
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+
+    <repository>
+        <id>sonatype</id>
+        <url>https://oss.sonatype.org/content/groups/public/</url>
+    </repository>
+
+    <repository>
+        <id>sk89q-repo</id>
+        <url>https://maven.enginehub.org/repo/</url>
+    </repository>
+
+    <repository>
+        <id>citizens-repo</id>
+        <url>https://maven.citizensnpcs.co/repo</url>
+    </repository>
+
+    <repository>
+        <id>codemc-repo</id>
+        <url>https://repo.codemc.io/repository/maven-public/</url>
+    </repository>
+
+</repositories>
+
+<pluginRepositories>
+    <pluginRepository>
+        <id>maven-snapshots</id>
+        <url>https://repository.apache.org/content/repositories/snapshots/</url>
+    </pluginRepository>
+</pluginRepositories>
+
+<!--
+   Configure where should Maven look for other libraries and plugins we
+   want to use in our plugin. Those libraries and plugins can you then
+   reference below in the dependencies section.
+
+   Each repository has two parts - the id and url. The id does not
+   really matter, however the URL must contain a valid Maven repository
+   where the dependency is "installed" (that's why we call the goal "install"
+   because we want to install our plugin on our PC as well so that we can
+   use it in our other plugins together without linking it as a dependency)
+
+   By default we use the Spigot repository for Spigot and the central Maven
+   repo for many other plugins.
+-->
+
+<!--
+   Configure what other libraries or plugins are we going to use in this plugin.
+
+   As a starting point, we are importing the Spigot API and Foundation.
+-->
+<dependencies>
+
+    <dependency>
+        <groupId>${foundation.path}</groupId>
+        <artifactId>Foundation</artifactId>
+        <version>${foundation.version}</version>
+        <!-- Include Foundation and its dependencies. There are exceptions, see shade plugin below -->
+        <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+        <groupId>com.sk89q.worldguard</groupId>
+        <artifactId>worldguard-bukkit</artifactId>
+        <version>7.0.7</version>
+        <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+        <groupId>org.spigotmc</groupId>
+        <artifactId>spigot</artifactId>
+        <version>${remapped.version}</version>
+        <scope>provided</scope>
+        <classifier>remapped-mojang</classifier>
+    </dependency>
+
+    <dependency>
+        <groupId>net.citizensnpcs</groupId>
+        <artifactId>citizens-main</artifactId>
+        <version>2.0.33-SNAPSHOT</version>
+        <type>jar</type>
+        <scope>provided</scope>
+        <exclusions>
+            <exclusion>
+                <groupId>*</groupId>
+                <artifactId>*</artifactId>
+            </exclusion>
+        </exclusions>
+    </dependency>
+
+    <dependency>
+        <groupId>me.filoghost.holographicdisplays</groupId>
+        <artifactId>holographicdisplays-api</artifactId>
+        <version>3.0.0</version>
+        <scope>provided</scope>
+    </dependency>
+
+</dependencies>
+
+<!--
+   Configure what happens when we are building this project (Maven compiles our code into bytecode
+   for us automatically).
+-->
+
+<build>
+    <finalName>${project.name}-${project.version}</finalName>
+    <plugins>
+
+        <plugin>
+            <groupId>net.md-5</groupId>
+            <artifactId>specialsource-maven-plugin</artifactId>
+            <!-- Get the latest version from https://mvnrepository.com/artifact/net.md-5/specialsource-maven-plugin -->
+            <version>2.0.2</version>
+            <executions>
+                <execution>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>remap</goal>
+                    </goals>
+                    <id>remap-obf</id>
+                    <configuration>
+                        <srgIn>org.spigotmc:minecraft-server:${remapped.version}:txt:maps-mojang</srgIn>
+                        <reverse>true</reverse>
+                        <remappedDependencies>org.spigotmc:spigot:${remapped.version}:jar:remapped-mojang</remappedDependencies>
+                        <remappedArtifactAttached>true</remappedArtifactAttached>
+                        <remappedClassifierName>remapped-obf</remappedClassifierName>
+                    </configuration>
+                </execution>
+                <execution>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>remap</goal>
+                    </goals>
+                    <id>remap-spigot</id>
+                    <configuration>
+                        <inputFile>${project.build.directory}/${project.artifactId}-${project.version}-remapped-obf.jar</inputFile>
+                        <srgIn>org.spigotmc:minecraft-server:${remapped.version}:csrg:maps-spigot</srgIn>
+                        <remappedDependencies>org.spigotmc:spigot:${remapped.version}:jar:remapped-obf</remappedDependencies>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
+
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+
+            <!-- Change version to the latest one from
+                 https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-jar-plugin -->
+            <version>3.2.2</version>
+        </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+
+            <!-- Change version to the latest one from
+                 https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-compiler-plugin -->
+            <version>3.9.0</version>
+            <configuration>
+                <source>11</source>
+                <target>11</target>
+            </configuration>
+        </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+
+            <!-- Change version to the latest one from
+                 https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-shade-plugin
+
+                 IF YOU USE JAVA 16 THEN PLACE 3.3.0-SNAPSHOT TO THE VERSION AND MAKE SURE TO
+                 UNCOMMENT <pluginRepositories> above.
+                 -->
+            <version>3.3.1-SNAPSHOT</version>
+            <executions>
+                <execution>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>shade</goal>
+                    </goals>
+                </execution>
+            </executions>
+            <configuration>
+                <createDependencyReducedPom>false</createDependencyReducedPom>
+                <artifactSet>
+                    <includes>
+                        <include>${foundation.path}:Foundation*</include>
+                    </includes>
+                </artifactSet>
+                <relocations>
+                    <relocation>
+                        <pattern>org.mineacademy.fo</pattern>
+                        <shadedPattern>${project.groupId}.${project.artifactId}.lib</shadedPattern>
+                    </relocation>
+                </relocations>
+            </configuration>
+        </plugin>
+    </plugins>
+    <resources>
+        <resource>
+            <directory>src/main/resources</directory>
+            <filtering>true</filtering>
+        </resource>
+    </resources>
+</build>
+
+</project>
