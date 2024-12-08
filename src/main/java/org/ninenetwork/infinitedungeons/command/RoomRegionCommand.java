@@ -1,9 +1,7 @@
 package org.ninenetwork.infinitedungeons.command;
 
 import org.bukkit.event.inventory.ClickType;
-import org.ninenetwork.infinitedungeons.PlayerCache;
-import org.ninenetwork.infinitedungeons.dungeon.DungeonJoinMode;
-import org.ninenetwork.infinitedungeons.item.RegionTool;
+import org.ninenetwork.infinitedungeons.item.tool.RegionTool;
 
 import java.util.List;
 

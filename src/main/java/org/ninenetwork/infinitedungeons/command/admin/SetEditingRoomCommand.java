@@ -1,12 +1,12 @@
-package org.ninenetwork.infinitedungeons.command.tests;
+package org.ninenetwork.infinitedungeons.command.admin;
 
 import org.bukkit.entity.Player;
 import org.mineacademy.fo.command.SimpleCommand;
 import org.ninenetwork.infinitedungeons.PlayerCache;
 
-public class SetEditingRoom extends SimpleCommand {
+public class SetEditingRoomCommand extends SimpleCommand {
 
-    public SetEditingRoom() {
+    public SetEditingRoomCommand() {
         super("setroom");
         setMinArguments(1);
     }
@@ -19,8 +19,6 @@ public class SetEditingRoom extends SimpleCommand {
             PlayerCache cache = PlayerCache.from(player);
             String name = args[0];
             cache.setDungeonRoomEditing(name);
-            //dungeon.setDungeonRooms(rooms);
-
         }
     }
 

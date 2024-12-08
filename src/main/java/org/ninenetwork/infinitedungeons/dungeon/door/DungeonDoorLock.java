@@ -1,4 +1,4 @@
-package org.ninenetwork.infinitedungeons.dungeon;
+package org.ninenetwork.infinitedungeons.dungeon.door;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -9,9 +9,11 @@ import org.mineacademy.fo.Common;
 import org.mineacademy.fo.FileUtil;
 import org.mineacademy.fo.region.Region;
 import org.mineacademy.fo.remain.CompParticle;
+import org.ninenetwork.infinitedungeons.dungeon.Dungeon;
+import org.ninenetwork.infinitedungeons.dungeon.DungeonGeneration;
 import org.ninenetwork.infinitedungeons.dungeon.instance.DungeonRoomInstance;
 import org.ninenetwork.infinitedungeons.dungeon.instance.DungeonRoomPoint;
-import org.ninenetwork.infinitedungeons.map.SchematicManager;
+import org.ninenetwork.infinitedungeons.world.SchematicManager;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -22,6 +24,11 @@ import java.util.Objects;
 public class DungeonDoorLock {
 
     private ArrayList<DungeonRoomInstance> connectingRooms = new ArrayList<>();
+
+    @Setter
+    private ArrayList<Block> fallBlocks = new ArrayList<>();
+
+    private DungeonRoomInstance belongingRoom;
 
     private Region doorRegion;
 
@@ -45,16 +52,52 @@ public class DungeonDoorLock {
 
     public void initializeDungeonDoor(Dungeon dungeon, DungeonRoomPoint point, DungeonRoomPoint nextPoint, File schematic, DungeonRoomInstance connector, DungeonRoomInstance connected) {
         setConnectingRooms(connector, connected);
+        this.belongingRoom = connector;
         Location midPoint = DungeonGeneration.findMidPoint(point.getCenterLocation(), nextPoint.getCenterLocation());
         Location finalPaste = point.getCenterLocation();
         int orientation = 0;
         if (point.getCenterLocation().getX() == nextPoint.getCenterLocation().getX()) {
             finalPaste = midPoint.clone().add(-2.0, 0.0, -2.0);
+            SchematicManager.clearDoorAreas(midPoint, "x");
         } else if (point.getCenterLocation().getZ() == nextPoint.getCenterLocation().getZ()) {
             finalPaste = midPoint.clone().add(0.0, 0.0, -2.0);
+            SchematicManager.clearDoorAreas(midPoint, "z");
             orientation = 1;
         }
         SchematicManager.pasteDoor(finalPaste, schematic, orientation);
+        ArrayList<Block> fallBlocksSetter = new ArrayList<>();
+        for (Block block : this.doorRegion.getBlocks()) {
+            if (block.getType() == Material.COAL_BLOCK) {
+                fallBlocksSetter.add(block);
+            }
+        }
+        setFallBlocks(fallBlocksSetter);
+        dungeon.getBloodRushDoors().add(this);
+    }
+
+    public void makeBlocksFall() {
+        for (Block block : this.getFallBlocks()) {
+            //Remain.spawnFallingBlock(block.getLocation(), block);
+            block.setType(Material.AIR);
+        }
+        /*
+        ServerGamePacketListenerImpl ps = ((CraftPlayer) p).getHandle().connection;
+
+        Constructor<FallingBlockEntity> constructor = FallingBlockEntity.class.getDeclaredConstructor(Level.class, double.class, double.class, double.class, BlockState.class);
+        constructor.setAccessible(true);
+        FallingBlockEntity b = constructor.newInstance(((CraftWorld)p.getWorld()).getHandle(), p.getLocation().getBlockX(), p.getLocation().getBlockY(), p.getLocation().getBlockZ(), Blocks.OAK_PLANKS.defaultBlockState());
+        b.setNoGravity(true);
+        b.setGlowingTag(true);
+        b.getBukkitEntity().setVisibleByDefault(true);
+        b.setInvulnerable(true);
+        b.setOnGround(false);
+
+        ps.send(new ClientboundAddEntityPacket(b));
+        ps.send(new ClientboundSetEntityDataPacket(b.getId(), b.getEntityData().packDirty()));
+
+        fallingBlocks.add(b);
+        */
+
     }
 
     public void setConnectingRooms(DungeonRoomInstance connector, DungeonRoomInstance connected) {

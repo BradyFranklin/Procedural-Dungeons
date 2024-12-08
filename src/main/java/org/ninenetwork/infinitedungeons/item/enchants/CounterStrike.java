@@ -1,2 +1,7 @@
-package org.ninenetwork.infinitedungeons.item.enchants;public class CounterStrike {
+package org.ninenetwork.infinitedungeons.item.enchants;
+
+public class CounterStrike {
+
+
+
 }

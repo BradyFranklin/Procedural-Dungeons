@@ -1,22 +1,22 @@
-package org.ninenetwork.infinitedungeons.item.armor;
+package org.ninenetwork.infinitedungeons.item.armor.storm;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.Material;
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
-import org.bukkit.inventory.meta.SkullMeta;
 import org.mineacademy.fo.plugin.SimplePlugin;
 import org.mineacademy.fo.remain.CompMetadata;
 import org.ninenetwork.infinitedungeons.item.AbstractDungeonItem;
 import org.ninenetwork.infinitedungeons.item.ItemLoreGenerator;
 import org.ninenetwork.infinitedungeons.item.ItemType;
 import org.ninenetwork.infinitedungeons.playerstats.PlayerStat;
-import org.ninenetwork.infinitedungeons.settings.Settings;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
 
 public class StormChestplate extends AbstractDungeonItem {
 
@@ -25,7 +25,7 @@ public class StormChestplate extends AbstractDungeonItem {
     }
 
     @Override
-    protected ItemStack generateItem(ItemStack item, Player player) {
+    protected ItemStack generateItem(ItemStack item) {
         LeatherArmorMeta meta = (LeatherArmorMeta) item.getItemMeta();
         meta.setColor(Color.fromRGB(23, 147, 196));
         String name = ChatColor.translateAlternateColorCodes('&', "&bStorm Chestplate &c✪✪✪✪&6✪");
@@ -65,7 +65,7 @@ public class StormChestplate extends AbstractDungeonItem {
     }
 
     @Override
-    protected ItemType getItemType() {
+    public ItemType getItemType() {
         return ItemType.ARMOR;
     }
 

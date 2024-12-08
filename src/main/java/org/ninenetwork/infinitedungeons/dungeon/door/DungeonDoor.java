@@ -1,22 +1,19 @@
-package org.ninenetwork.infinitedungeons.dungeon;
+package org.ninenetwork.infinitedungeons.dungeon.door;
 
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.block.Block;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.FileUtil;
 import org.mineacademy.fo.region.Region;
-import org.mineacademy.fo.remain.CompParticle;
-import org.mineacademy.fo.settings.FileConfig;
+import org.ninenetwork.infinitedungeons.dungeon.Dungeon;
+import org.ninenetwork.infinitedungeons.dungeon.DungeonGeneration;
 import org.ninenetwork.infinitedungeons.dungeon.instance.DungeonRoomInstance;
 import org.ninenetwork.infinitedungeons.dungeon.instance.DungeonRoomPoint;
-import org.ninenetwork.infinitedungeons.map.SchematicManager;
+import org.ninenetwork.infinitedungeons.world.SchematicManager;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 @Getter
@@ -45,8 +42,10 @@ public class DungeonDoor {
         int orientation = 0;
         if (point.getCenterLocation().getX() == nextPoint.getCenterLocation().getX()) {
             finalPaste = midPoint.clone().add(-2.0, 0.0, -2.0);
+            SchematicManager.clearDoorAreas(midPoint, "x");
         } else if (point.getCenterLocation().getZ() == nextPoint.getCenterLocation().getZ()) {
             finalPaste = midPoint.clone().add(0.0, 0.0, -2.0);
+            SchematicManager.clearDoorAreas(midPoint, "z");
             orientation = 1;
         }
         SchematicManager.pasteDoor(finalPaste, schematic, orientation);
@@ -67,9 +66,11 @@ public class DungeonDoor {
             if (point.getCenterLocation().getX() == nextPoint.getCenterLocation().getX()) {
                 firstPoint = midPoint.clone().add(2.0, 5.0, 2.0);
                 secondPoint = midPoint.clone().add(-2.0, 0.0, -2.0);
+                SchematicManager.clearDoorAreas(midPoint, "x");
             } else if (point.getCenterLocation().getZ() == nextPoint.getCenterLocation().getZ()) {
                 firstPoint = midPoint.clone().add(-2.0, 5.0, 2.0);
                 secondPoint = midPoint.clone().add(2.0, 0.0, -2.0);
+                SchematicManager.clearDoorAreas(midPoint, "z");
             }
             Region region = new Region(firstPoint, secondPoint);
             File schematic = FileUtil.getFile("DungeonStorage/Schematics/door.schematic");

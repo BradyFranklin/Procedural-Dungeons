@@ -9,7 +9,7 @@ import org.mineacademy.fo.model.HookManager;
 import org.mineacademy.fo.region.Region;
 import org.ninenetwork.infinitedungeons.PlayerCache;
 import org.ninenetwork.infinitedungeons.dungeon.*;
-import org.ninenetwork.infinitedungeons.map.SchematicManager;
+import org.ninenetwork.infinitedungeons.world.SchematicManager;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -39,10 +39,13 @@ public class CreateRoomCommand extends SimpleCommand {
         final DungeonRoomType type = this.findEnum(DungeonRoomType.class, param.toUpperCase(), "No such room type '{0}'. Available: {available}");
         DungeonRoom dungeonRoom = DungeonRoom.createDungeonRoom(name, type);
 
-        String path1 = "DungeonStorage/Schematics/" + (name + "1" + ".schematic");
-        String path2 = "DungeonStorage/Schematics/" + (name + "2" + ".schematic");
-        String path3 = "DungeonStorage/Schematics/" + (name + "3" + ".schematic");
-        String path4 = "DungeonStorage/Schematics/" + (name + "4" + ".schematic");
+        dungeonRoom.setRoomCenter(region.getPrimary().clone().add(15, 0, 15));
+        dungeonRoom.setRoomRegion(region);
+
+        String path1 = "DungeonStorage/Schematics/%r" + (name.toLowerCase() + "1" + ".schematic");
+        String path2 = "DungeonStorage/Schematics/%r" + (name.toLowerCase() + "2" + ".schematic");
+        String path3 = "DungeonStorage/Schematics/%r" + (name.toLowerCase() + "3" + ".schematic");
+        String path4 = "DungeonStorage/Schematics/%r" + (name.toLowerCase() + "4" + ".schematic");
         Location firstLocationChange;
         Location secondLocationChange;
         Location thirdLocationChange;
@@ -51,11 +54,16 @@ public class CreateRoomCommand extends SimpleCommand {
         Location sixthLocationChange;
 
         if (sizeIdentifier.equals("1x1_Square")) {
+            path1 = path1.replace("%r", "1x1/");
             File schematic1 = FileUtil.getOrMakeFile(path1);
             Region region1 = new Region(region.getPrimary(), region.getSecondary());
             SchematicManager.save(region1, schematic1);
             dungeonRoom.setSchematics(new ArrayList<>(Arrays.asList(schematic1.getName())));
         } else if (sizeIdentifier.equals("2x2_Square")) {
+            path1 = path1.replace("%r", "2x2/");
+            path2 = path2.replace("%r", "2x2/");
+            path3 = path3.replace("%r", "2x2/");
+            path4 = path4.replace("%r", "2x2/");
             File schematic1 = FileUtil.getOrMakeFile(path1);
             File schematic2 = FileUtil.getOrMakeFile(path2);
             File schematic3 = FileUtil.getOrMakeFile(path3);
@@ -76,6 +84,9 @@ public class CreateRoomCommand extends SimpleCommand {
             SchematicManager.save(region4, schematic4);
             dungeonRoom.setSchematics(new ArrayList<>(Arrays.asList(schematic1.getName(), schematic2.getName(), schematic3.getName(), schematic4.getName())));
         } else if (sizeIdentifier.equals("1x1x1_L")) {
+            path1 = path1.replace("%r", "1x1x1/");
+            path2 = path2.replace("%r", "1x1x1/");
+            path3 = path3.replace("%r", "1x1x1/");
             File schematic1 = FileUtil.getOrMakeFile(path1);
             File schematic2 = FileUtil.getOrMakeFile(path2);
             File schematic3 = FileUtil.getOrMakeFile(path3);
@@ -92,6 +103,8 @@ public class CreateRoomCommand extends SimpleCommand {
             SchematicManager.save(region3, schematic3);
             dungeonRoom.setSchematics(new ArrayList<>(Arrays.asList(schematic1.getName(), schematic2.getName(), schematic3.getName())));
         } else if (sizeIdentifier.equals("1x2_Rectangle")) {
+            path1 = path1.replace("%r", "1x2/");
+            path2 = path2.replace("%r", "1x2/");
             File schematic1 = FileUtil.getOrMakeFile(path1);
             File schematic2 = FileUtil.getOrMakeFile(path2);
             firstLocationChange = region.getSecondary().clone().add(0.0, 0.0, -31.0);
@@ -102,6 +115,9 @@ public class CreateRoomCommand extends SimpleCommand {
             SchematicManager.save(region2, schematic2);
             dungeonRoom.setSchematics(new ArrayList<>(Arrays.asList(schematic1.getName(), schematic2.getName())));
         } else if (sizeIdentifier.equals("1x3_Rectangle")) {
+            path1 = path1.replace("%r", "1x3/");
+            path2 = path2.replace("%r", "1x3/");
+            path3 = path3.replace("%r", "1x3/");
             File schematic1 = FileUtil.getOrMakeFile(path1);
             File schematic2 = FileUtil.getOrMakeFile(path2);
             File schematic3 = FileUtil.getOrMakeFile(path3);
@@ -117,6 +133,10 @@ public class CreateRoomCommand extends SimpleCommand {
             SchematicManager.save(region3, schematic3);
             dungeonRoom.setSchematics(new ArrayList<>(Arrays.asList(schematic1.getName(), schematic2.getName(), schematic3.getName())));
         } else if (sizeIdentifier.equals("1x4_Rectangle")) {
+            path1 = path1.replace("%r", "1x4/");
+            path2 = path2.replace("%r", "1x4/");
+            path3 = path3.replace("%r", "1x4/");
+            path4 = path4.replace("%r", "1x4/");
             File schematic1 = FileUtil.getOrMakeFile(path1);
             File schematic2 = FileUtil.getOrMakeFile(path2);
             File schematic3 = FileUtil.getOrMakeFile(path3);
@@ -138,6 +158,8 @@ public class CreateRoomCommand extends SimpleCommand {
             dungeonRoom.setSchematics(new ArrayList<>(Arrays.asList(schematic1.getName(), schematic2.getName(), schematic3.getName(), schematic4.getName())));
         }
         dungeonRoom.setRoomIdentifier(sizeIdentifier);
+        dungeonRoom.setRoomCenter(region.getPrimary().clone().add(15, 0, 15));
+        tellSuccess("Successfully created dungeon room " + dungeonRoom.getName() + " of type " + dungeonRoom.getRoomIdentifier());
     }
 
 }

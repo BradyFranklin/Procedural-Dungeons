@@ -1,4 +1,4 @@
-package org.ninenetwork.infinitedungeons.map;
+package org.ninenetwork.infinitedungeons.world;
 
 import org.mineacademy.fo.FileUtil;
 

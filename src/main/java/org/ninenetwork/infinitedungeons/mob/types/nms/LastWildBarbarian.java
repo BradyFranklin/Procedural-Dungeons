@@ -1,4 +1,4 @@
-package org.ninenetwork.infinitedungeons.mob.types;
+package org.ninenetwork.infinitedungeons.mob.types.nms;
 
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntityType;
@@ -38,7 +38,7 @@ public class LastWildBarbarian extends Zombie {
         this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true));
 
         final Entity bukkitEntity = getBukkitEntity();
-        bukkitEntity.setCustomName(Common.colorize(DungeonMobUtil.getEntityDefaultNametag(bukkitEntity, "Wild Barbarian", "#F1FC01", "#FDBA40")));
+        //bukkitEntity.setCustomName(Common.colorize(DungeonMobUtil.getEntityDefaultNametag(bukkitEntity, "Wild Barbarian", "#F1FC01", "#FDBA40", 100)));
         bukkitEntity.setCustomNameVisible(true);
 
         DungeonMobUtil.createDyedArmorPieces(bukkitEntity, Color.YELLOW);

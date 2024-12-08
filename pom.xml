@@ -48,13 +48,15 @@
 
    You can use those variables in your src/resources folder. See
    plugin.yml folder there for example usage.
+   last foundation v 6.6.4
 -->
 
 <properties>
     <author>InfinitySB</author>
     <main.class>org.ninenetwork.infinitedungeons.InfiniteDungeonsPlugin</main.class>
     <java.version>1.8</java.version>
-    <foundation.version>6.6.4</foundation.version>
+    <foundation.version>6.7.15</foundation.version>
+    <!--6.7.14  6.6.4  6.7.12    com.github.kangarko-->
     <foundation.path>com.github.kangarko</foundation.path>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <remapped.version>1.20.4-R0.1-SNAPSHOT</remapped.version>
@@ -87,6 +89,16 @@
         <url>https://repo.codemc.io/repository/maven-public/</url>
     </repository>
 
+    <repository>
+        <id>Maven Central</id>
+        <url>https://repo1.maven.org/maven2/</url>
+    </repository>
+
+    <repository>
+        <id>papermc</id>
+        <url>https://repo.papermc.io/repository/maven-public/</url>
+    </repository>
+
 </repositories>
 
 <pluginRepositories>
@@ -94,6 +106,7 @@
         <id>maven-snapshots</id>
         <url>https://repository.apache.org/content/repositories/snapshots/</url>
     </pluginRepository>
+
 </pluginRepositories>
 
 <!--
@@ -119,6 +132,14 @@
 <dependencies>
 
     <dependency>
+        <groupId>org.spigotmc</groupId>
+        <artifactId>spigot</artifactId>
+        <version>${remapped.version}</version>
+        <scope>provided</scope>
+        <classifier>remapped-mojang</classifier>
+    </dependency>
+
+    <dependency>
         <groupId>${foundation.path}</groupId>
         <artifactId>Foundation</artifactId>
         <version>${foundation.version}</version>
@@ -131,14 +152,6 @@
         <artifactId>worldguard-bukkit</artifactId>
         <version>7.0.7</version>
         <scope>provided</scope>
-    </dependency>
-
-    <dependency>
-        <groupId>org.spigotmc</groupId>
-        <artifactId>spigot</artifactId>
-        <version>${remapped.version}</version>
-        <scope>provided</scope>
-        <classifier>remapped-mojang</classifier>
     </dependency>
 
     <dependency>
@@ -160,6 +173,27 @@
         <artifactId>holographicdisplays-api</artifactId>
         <version>3.0.0</version>
         <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+        <groupId>org.mcmonkey</groupId>
+        <artifactId>sentinel</artifactId>
+        <version>2.8.1-SNAPSHOT</version>
+        <type>jar</type>
+        <scope>provided</scope>
+        <exclusions>
+            <exclusion>
+                <groupId>*</groupId>
+                <artifactId>*</artifactId>
+            </exclusion>
+        </exclusions>
+    </dependency>
+
+    <dependency>
+        <groupId>com.elmakers.mine.bukkit</groupId>
+        <artifactId>EffectLib</artifactId>
+        <version>10.2</version>
+        <scope>compile</scope>
     </dependency>
 
 </dependencies>
@@ -224,8 +258,8 @@
                  https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-compiler-plugin -->
             <version>3.9.0</version>
             <configuration>
-                <source>11</source>
-                <target>11</target>
+                <source>14</source>
+                <target>14</target>
             </configuration>
         </plugin>
         <plugin>

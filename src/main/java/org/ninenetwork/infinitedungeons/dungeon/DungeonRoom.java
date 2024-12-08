@@ -12,7 +12,7 @@ import org.mineacademy.fo.model.ConfigSerializable;
 import org.mineacademy.fo.region.Region;
 import org.mineacademy.fo.settings.ConfigItems;
 import org.mineacademy.fo.settings.YamlConfig;
-import org.ninenetwork.infinitedungeons.dungeon.instance.DungeonRoomPoint;
+import org.ninenetwork.infinitedungeons.dungeon.secret.SecretType;
 
 import java.io.File;
 import java.util.*;
@@ -39,6 +39,23 @@ public class DungeonRoom extends YamlConfig implements ConfigSerializable {
     /* ------------------------------------------------------------------------------- */
 
     private DungeonRoomType type;
+
+    @Getter
+    private List<Location> secrets;
+
+    @Getter
+    private Map<Location, SecretType> secretMapping;
+
+    @Getter
+    private List<Location> mobSpawnpoints;
+
+    @Setter
+    private Location roomCenter;
+
+    @Setter
+    private Location floorHeight;
+
+    private int secretAmount;
 
     private List<String> schematics;
 
@@ -76,6 +93,12 @@ public class DungeonRoom extends YamlConfig implements ConfigSerializable {
         this.roomRegion = get("Region", Region.class);
         this.roomIdentifier = getString("Room_Identifier");
         this.schematics = getStringList("Schematics");
+        this.secretAmount = getInteger("Secret_Amount", 0);
+        this.secrets = getList("Secrets", Location.class);
+        this.secretMapping = getMap("Secret_Mapping", Location.class, SecretType.class);
+        this.roomCenter = getLocation("Room_Center");
+        this.floorHeight = getLocation("Floor_Height");
+        this.mobSpawnpoints = getList("Mob_Spawnpoints", Location.class);
 
         this.save();
     }
@@ -88,6 +111,12 @@ public class DungeonRoom extends YamlConfig implements ConfigSerializable {
         this.set("Region", this.roomRegion);
         this.set("Room_Identifier", this.roomIdentifier);
         this.set("Schematics", this.schematics);
+        this.set("Secret_Amount", this.secretAmount);
+        this.set("Secrets", this.secrets);
+        this.set("Secret_Mapping", this.secretMapping);
+        this.set("Room_Center", this.roomCenter);
+        this.set("Floor_Height", this.floorHeight);
+        this.set("Mob_Spawnpoints", this.mobSpawnpoints);
     }
 
     @Override
@@ -98,7 +127,13 @@ public class DungeonRoom extends YamlConfig implements ConfigSerializable {
                 "Size_Tag", this.roomSizeTag,
                 "Region", this.roomRegion,
                 "Schematics", this.schematics,
-                "Room_Identifier", this.roomIdentifier);
+                "Secret_Amount", this.secretAmount,
+                "Room_Identifier", this.roomIdentifier,
+                "Secrets", this.secrets,
+                "Secret_Mapping", this.secretMapping,
+                "Room_Center", this.roomCenter,
+                "Mob_Spawnpoints", this.mobSpawnpoints,
+                "Floor_Height", this.floorHeight);
     }
 
     public static DungeonRoom deserialize(SerializedMap map, DungeonRoom instance) {
@@ -110,6 +145,12 @@ public class DungeonRoom extends YamlConfig implements ConfigSerializable {
         data.roomRegion = map.get("Region", Region.class);
         data.roomIdentifier = map.getString("Room_Identifier");
         data.schematics = map.getStringList("Schematics");
+        data.secretAmount = map.getInteger("Secret_Amount");
+        data.secrets = map.getList("Secrets", Location.class);
+        data.secretMapping = map.getMap("Secret_Mapping", Location.class, SecretType.class);
+        data.roomCenter = map.getLocation("Room_Center");
+        data.floorHeight = map.getLocation("Floor_Height");
+        data.mobSpawnpoints = map.getList("Mob_Spawnpoints", Location.class);
 
         return data;
     }
@@ -122,6 +163,15 @@ public class DungeonRoom extends YamlConfig implements ConfigSerializable {
         return loadedDungeonRooms.loadOrCreateItem(name, () -> type.instantiate(name));
     }
 
+    public void deleteDungeonRoom(String name) {
+        DungeonRoom room = DungeonRoom.findByName(name);
+        for (String string : room.getSchematics()) {
+            File file = FileUtil.getFile("DungeonStorage/Schematics/" + DungeonGeneration.folderClassification(room.getRoomIdentifier()) + "/" + string + ".yml");
+            file.delete();
+        }
+        DungeonRoom.removeDungeonRoom(name);
+    }
+
     /*
     public static initializeAllBaseDungeonRooms() {
         for (File file : FileUtil.getFiles("DungeonStorage/Schematics/", ".schematic")) {
@@ -132,13 +182,48 @@ public class DungeonRoom extends YamlConfig implements ConfigSerializable {
     }
     */
 
+    public void setFloorHeight(Location floorHeight) {
+        this.floorHeight = floorHeight;
+        this.save();
+    }
+
     public void setSchematics(List<String> schematics) {
         this.schematics = schematics;
         this.save();
     }
 
+    public void setRoomRegion(Region roomRegion) {
+        this.roomRegion = roomRegion;
+        this.save();
+    }
+
     public void setRoomIdentifier(String roomIdentifier) {
         this.roomIdentifier = roomIdentifier;
+        this.save();
+    }
+
+    public void addSecret(Location location) {
+        this.secrets.add(location);
+        this.save();
+    }
+
+    public void removeSecret(Location location) {
+        this.secrets.remove(location);
+        this.save();
+    }
+
+    public void addMobSpawnpoint(Location location) {
+        this.mobSpawnpoints.add(location);
+        this.save();
+    }
+
+    public void removeMobSpawnpoint(Location location) {
+        this.mobSpawnpoints.remove(location);
+        this.save();
+    }
+
+    public void setSecrets(ArrayList<Location> list) {
+        this.secrets = list;
         this.save();
     }
 
@@ -183,7 +268,7 @@ public class DungeonRoom extends YamlConfig implements ConfigSerializable {
         final ArrayList<DungeonRoom> items = new ArrayList<>();
         for (final DungeonRoom item : getDungeonRooms())
             if (item.getRoomIdentifier().equalsIgnoreCase(roomIdentifier)) {
-                if (!item.getName().equalsIgnoreCase("Lobby") && !item.getName().equalsIgnoreCase("Blood")) {
+                if (!item.getName().equalsIgnoreCase("lobby") && !item.getName().equalsIgnoreCase("blood")) {
                     items.add(item);
                 }
             }

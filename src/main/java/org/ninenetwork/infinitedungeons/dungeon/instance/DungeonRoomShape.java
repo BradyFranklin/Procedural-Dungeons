@@ -2,6 +2,7 @@ package org.ninenetwork.infinitedungeons.dungeon.instance;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.bukkit.Location;
 
 import java.util.ArrayList;
 
@@ -14,6 +15,7 @@ public class DungeonRoomShape {
     int orientation;
     String roomType;
     String direction;
+    Location roomCenterLocation;
     ArrayList<DungeonRoomPoint> gridConsumption;
 
     public DungeonRoomShape(String name) {

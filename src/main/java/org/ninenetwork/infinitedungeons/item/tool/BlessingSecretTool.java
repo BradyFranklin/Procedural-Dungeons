@@ -9,10 +9,8 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
-import org.mineacademy.fo.Common;
 import org.mineacademy.fo.Messenger;
 import org.mineacademy.fo.menu.model.ItemCreator;
-import org.mineacademy.fo.menu.tool.Tool;
 import org.mineacademy.fo.remain.CompMaterial;
 import org.ninenetwork.infinitedungeons.PlayerCache;
 import org.ninenetwork.infinitedungeons.dungeon.Dungeon;
@@ -20,10 +18,10 @@ import org.ninenetwork.infinitedungeons.dungeon.DungeonRoom;
 import org.ninenetwork.infinitedungeons.settings.Settings;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-public final class SecretTool extends DungeonTool {
+public final class BlessingSecretTool extends DungeonTool {
 
     @Getter
-    private static final SecretTool instance = new SecretTool();
+    private static final BlessingSecretTool instance = new BlessingSecretTool();
 
     @Override
     public ItemStack getItem() {

@@ -1,4 +1,4 @@
-package org.ninenetwork.infinitedungeons.item;
+package org.ninenetwork.infinitedungeons.item.tool;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;

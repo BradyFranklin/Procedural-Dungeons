@@ -2,11 +2,17 @@ package org.ninenetwork.infinitedungeons.dungeon;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.mineacademy.fo.Common;
+import org.ninenetwork.infinitedungeons.dungeon.door.DungeonDoor;
+import org.ninenetwork.infinitedungeons.dungeon.door.DungeonDoorLock;
+import org.ninenetwork.infinitedungeons.dungeon.door.DungeonLobbyDoor;
 import org.ninenetwork.infinitedungeons.dungeon.instance.DungeonRoomInstance;
 import org.ninenetwork.infinitedungeons.dungeon.instance.DungeonRoomPoint;
+import org.ninenetwork.infinitedungeons.settings.Settings;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +37,7 @@ public class DungeonPathfinding {
     protected List<DungeonRoomInstance> dungeonRooms;
 
     protected ArrayList<DungeonRoomInstance> bloodRushPath = new ArrayList<>();
-    protected ArrayList<DungeonRoomConnection> allConnections = new ArrayList<>();
+    //protected ArrayList<DungeonRoomConnection> allConnections = new ArrayList<>();
     protected DungeonRoomPoint currentEvaluationPoint;
     protected ArrayList<DungeonRoomInstance> roomNetwork = new ArrayList<>();
 
@@ -41,6 +47,7 @@ public class DungeonPathfinding {
 
     protected boolean bloodRushPathingDone;
     protected boolean isAligned;
+    protected boolean bloodRushAddedNetwork;
 
     public DungeonPathfinding(Dungeon dungeon, DungeonGrid grid) {
         this.lobbyCenter = dungeon.getLobbyLocation();
@@ -56,9 +63,15 @@ public class DungeonPathfinding {
         this.currentRoom = grid.getLobbyRoom(dungeon);
         this.bloodRushPathingDone = false;
         this.isAligned = false;
+        this.bloodRushAddedNetwork = false;
     }
 
     public void initializePathfinding(Dungeon dungeon, DungeonGrid grid) {
+        if (!dungeon.getDungeonIntegrity().isIntegrityMaintained()) {
+            return;
+        }
+        dungeon.getDungeonIntegrity().setBloodPathfinding(DungeonIntegrityStatus.RUNNING);
+
         setDirectionToMove("Move " + grid.getBloodRoom(dungeon).getShape().getDirection());
         this.setAligned(lobbyX == bloodX || lobbyZ == bloodZ);
         setPriorityDirection(getPriorityDirection(lobbyCenter, bloodCenter, directionToMove));
@@ -66,10 +79,15 @@ public class DungeonPathfinding {
         boolean generateAlignedNewPoint = false;
 
         findFirstMove(dungeon);
+        int integrity = 0;
         while (!bloodRushPathingDone) {
+            integrity++;
+            if (integrity > 100) {
+                break;
+            }
             if (!this.isAligned) {
                 DungeonRoomPoint point = findPriorityBestPoint(getCurrentRoom());
-                if  (point != null) {
+                if (point != null) {
                     if (point.getCenterLocation().getX() == bloodX || point.getCenterLocation().getZ() == bloodZ) {
                         if (point.getCenterLocation().getX() == bloodX) {
                             Common.log("set aligned with blood to true");
@@ -83,20 +101,26 @@ public class DungeonPathfinding {
                         setCurrentEvaluationPoint(point);
                     } else {
                         DungeonRoomPoint nextPoint = findNextPointFromCurrentPoint(dungeon, point, getPriorityDirection());
-                        if (DungeonRoomInstance.getRoomFromPoint(dungeon, nextPoint) == null) {
-                            setDirectionToMove(reverseDirection(getPriorityDirection()));
-                            point = findBestPoint(getCurrentRoom());
-                            nextPoint = findNextPointFromCurrentPoint(dungeon, point, getDirectionToMove());
+                        if (nextPoint != null) {
+                            if (DungeonRoomInstance.getRoomFromPoint(dungeon, nextPoint) == null) {
+                                setDirectionToMove(reverseDirection(getPriorityDirection()));
+                                point = findBestPoint(getCurrentRoom());
+                                nextPoint = findNextPointFromCurrentPoint(dungeon, point, getDirectionToMove());
+                            }
+                            DungeonRoomInstance roomInstance = DungeonRoomInstance.getRoomFromPoint(dungeon, nextPoint);
+                            Location midPoint = DungeonGeneration.findMidPoint(point.getCenterLocation(), nextPoint.getCenterLocation());
+                            midPoint.getBlock().setType(Material.REDSTONE_BLOCK);
+                            DungeonDoorLock.addLockedDungeonDoor(dungeon, point, nextPoint);
+                            setCurrentEvaluationPoint(nextPoint);
+                            bloodRushPath.add(roomInstance);
+                            setCurrentRoom(roomInstance);
+                            Common.log("Added room as priority at " + nextPoint.getCenterLocation().getX() + " " + nextPoint.getCenterLocation().getY() + " " + nextPoint.getCenterLocation().getZ()
+                                    + " Blood xz is " + bloodX + " " + bloodZ);
+
+                        } else {
+                            dungeon.getDungeonIntegrity().setBloodPathfinding(DungeonIntegrityStatus.FAILED);
+                            dungeon.getDungeonIntegrity().changeIntegrity(false, "BloodPathfinding");
                         }
-                        DungeonRoomInstance roomInstance = DungeonRoomInstance.getRoomFromPoint(dungeon, nextPoint);
-                        Location midPoint = DungeonGeneration.findMidPoint(point.getCenterLocation(), nextPoint.getCenterLocation());
-                        midPoint.getBlock().setType(Material.REDSTONE_BLOCK);
-                        DungeonDoorLock.addLockedDungeonDoor(dungeon, point, nextPoint);
-                        setCurrentEvaluationPoint(nextPoint);
-                        bloodRushPath.add(roomInstance);
-                        setCurrentRoom(roomInstance);
-                        Common.log("Added room as priority at " + nextPoint.getCenterLocation().getX() + " " + nextPoint.getCenterLocation().getY() + " " + nextPoint.getCenterLocation().getZ()
-                                + " Blood xz is " + bloodX + " " + bloodZ);
                     }
                 }
             } else {
@@ -108,7 +132,8 @@ public class DungeonPathfinding {
                     point = findBestPoint(getCurrentRoom());
                 }
                 DungeonRoomPoint nextPoint = findNextPointFromCurrentPoint(dungeon, point, getDirectionToMove());
-                if (DungeonRoomInstance.getRoomFromPoint(dungeon, nextPoint) == null) {
+                //added or next point null check
+                if (DungeonRoomInstance.getRoomFromPoint(dungeon, nextPoint) == null || nextPoint == null) {
                     setDirectionToMove(reverseDirection(getPriorityDirection()));
                     point = findBestPoint(getCurrentRoom());
                     nextPoint = findNextPointFromCurrentPoint(dungeon, point, getDirectionToMove());
@@ -136,6 +161,7 @@ public class DungeonPathfinding {
                     }
                     //initializePathFindingSecondary(dungeon, grid);
                     connectRemainingRooms(dungeon);
+                    dungeon.getDungeonIntegrity().setBloodPathfinding(DungeonIntegrityStatus.COMPLETED);
                     break;
                 } else {
                     bloodRushPath.add(roomInstance);
@@ -163,11 +189,13 @@ public class DungeonPathfinding {
         verifyAllReachable(dungeon);
     }
 
-    // possible implement
     public void verifyAllReachable(Dungeon dungeon) {
         ArrayList<DungeonRoomInstance> unreachable = new ArrayList<>();
-        for (DungeonRoomInstance instance : getBloodRushPath()) {
-            addRoomToNetwork(instance);
+        if (!bloodRushAddedNetwork) {
+            for (DungeonRoomInstance instance : getBloodRushPath()) {
+                addRoomToNetwork(instance);
+            }
+            this.bloodRushAddedNetwork = true;
         }
         for (DungeonRoomInstance instance : getBloodRushPath()) {
             if (!instance.equals(DungeonRoomInstance.getRoomFromLocation(dungeon, bloodCenter)) && !instance.equals(DungeonRoomInstance.getRoomFromLocation(dungeon, lobbyCenter))) {
@@ -180,15 +208,54 @@ public class DungeonPathfinding {
         for (DungeonRoomInstance instance : dungeon.getDungeonRooms()) {
             if (!getRoomNetwork().contains(instance)) {
                 unreachable.add(instance);
-                Common.log("Unreachable room " + instance.getDungeonRoomPoints().get(0).getCenterLocation().getX() + " " + instance.getDungeonRoomPoints().get(0).getCenterLocation().getZ());
+                Common.log("Fixing unreachable room " + instance.getDungeonRoomPoints().get(0).getCenterLocation().getX() + " " + instance.getDungeonRoomPoints().get(0).getCenterLocation().getZ());
             }
         }
         if (!unreachable.isEmpty()) {
             makeReachable(dungeon, unreachable);
         } else {
-            //dungeon.setGenerationComplete(true);
-            //dungeon.initializeDungeonLobby();
+            // GENERATION ENDS BEGIN DUNGEON LOGIC //
+            Common.log("Beginning Dungeon logic");
+            dungeon.getDungeonSecretInstance().initializeAllDungeonSecrets();
+            registerPuzzles(dungeon);
+            //dungeon.initializeMobsAllRooms(dungeon);
+            for (DungeonRoomInstance instance : this.bloodRushPath) {
+                if (instance.getType() != DungeonRoomType.BLOOD && instance.getType() != DungeonRoomType.LOBBY) {
+                    instance.setKeyRoom(true);
+                }
+            }
+            dungeon.setGenerationComplete(true);
+            DungeonScore score = dungeon.getDungeonScore();
+            score.setSecretRequirement(dungeon);
+            dungeon.initializeDungeonLobby();
         }
+
+    }
+
+    public void registerPuzzles(Dungeon dungeon) {
+        int puzzles = 0;
+        for (DungeonRoomInstance instance : dungeon.getDungeonRooms()) {
+            if (instance.getRoomIdentifier().equalsIgnoreCase("1x1_Square")) {
+                Common.log("Register puzzles passed identifier");
+                Common.log("RoomType is " + instance.getType());
+                if (instance.getType() != DungeonRoomType.LOBBY && instance.getType() != DungeonRoomType.BLOOD) {
+                    Common.log("Register puzzles passed not lobbyblood");
+                    Common.log("Register puzzles connected size " + instance.getRoomsConnected().size());
+                    if (instance.getRoomsConnected().size() == 1) {
+                        if (puzzles < 5) {
+                            instance.setRoomType("puzzle");
+                            instance.setType(DungeonRoomType.PUZZLE);
+                            puzzles++;
+                            Common.log("Added " + instance.getRoomCenter().getX() + ", " + instance.getRoomCenter().getZ() + " as a puzzle room during generation");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    public void registerAndReplacePuzzles() {
 
     }
 
@@ -208,7 +275,7 @@ public class DungeonPathfinding {
                 if (getRoomNetwork().contains(DungeonRoomInstance.getRoomFromLocation(dungeon, location1))) {
                     checkingRoom = DungeonRoomInstance.getRoomFromLocation(dungeon, location1);
                     if (checkingRoom != null) {
-                        if (location1 != bloodCenter && location1 != lobbyCenter) {
+                        if (!location1.equals(bloodCenter) && !location1.equals(lobbyCenter)) {
                             room.addConnectedRoom(DungeonRoomInstance.getRoomFromLocation(dungeon, location1));
                             checkingRoom.addConnectedRoom(room);
                             DungeonDoor.addDungeonDoor(dungeon, point, getPointFromLocation(dungeon, location1));
@@ -222,7 +289,7 @@ public class DungeonPathfinding {
                 if (getRoomNetwork().contains(DungeonRoomInstance.getRoomFromLocation(dungeon, location2))) {
                     checkingRoom = DungeonRoomInstance.getRoomFromLocation(dungeon, location2);
                     if (checkingRoom != null) {
-                        if (location2 != bloodCenter && location2 != lobbyCenter) {
+                        if (!location2.equals(bloodCenter) && !location2.equals(lobbyCenter)) {
                             room.addConnectedRoom(DungeonRoomInstance.getRoomFromLocation(dungeon, location2));
                             checkingRoom.addConnectedRoom(room);
                             DungeonDoor.addDungeonDoor(dungeon, point, getPointFromLocation(dungeon, location2));
@@ -236,7 +303,7 @@ public class DungeonPathfinding {
                 if (getRoomNetwork().contains(DungeonRoomInstance.getRoomFromLocation(dungeon, location3))) {
                     checkingRoom = DungeonRoomInstance.getRoomFromLocation(dungeon, location3);
                     if (checkingRoom != null) {
-                        if (location3 != bloodCenter && location3 != lobbyCenter) {
+                        if (!location3.equals(bloodCenter) && !location3.equals(lobbyCenter)) {
                             room.addConnectedRoom(DungeonRoomInstance.getRoomFromLocation(dungeon, location3));
                             checkingRoom.addConnectedRoom(room);
                             DungeonDoor.addDungeonDoor(dungeon, point, getPointFromLocation(dungeon, location3));
@@ -250,7 +317,7 @@ public class DungeonPathfinding {
                 if (getRoomNetwork().contains(DungeonRoomInstance.getRoomFromLocation(dungeon, location4))) {
                     checkingRoom = DungeonRoomInstance.getRoomFromLocation(dungeon, location4);
                     if (checkingRoom != null) {
-                        if (location4 != bloodCenter && location4 != lobbyCenter) {
+                        if (!location4.equals(bloodCenter) && !location4.equals(lobbyCenter)) {
                             room.addConnectedRoom(DungeonRoomInstance.getRoomFromLocation(dungeon, location4));
                             checkingRoom.addConnectedRoom(room);
                             DungeonDoor.addDungeonDoor(dungeon, point, getPointFromLocation(dungeon, location4));
@@ -274,17 +341,6 @@ public class DungeonPathfinding {
                 }
             }
         }
-    }
-
-    public boolean checkHasPathToBloodRushPath(DungeonRoomInstance instance, ArrayList<DungeonRoomInstance> ignoredRooms) {
-        ArrayList<DungeonRoomInstance> nextCheckRooms = new ArrayList<>();
-        for (DungeonRoomInstance connection : instance.getRoomsConnected()) {
-            if (!(connection.getRoomsConnected().size() <= 1)) {
-                nextCheckRooms.add(connection);
-                ignoredRooms.add(instance);
-            }
-        }
-        return false;
     }
 
     public boolean connectRoom(Dungeon dungeon, DungeonRoomInstance instance, boolean bloodRushOnly) {
@@ -407,165 +463,6 @@ public class DungeonPathfinding {
         setRoomNetwork(network);
     }
 
-
-
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    /*
-    public void initializePathFindingSecondary(Dungeon dungeon, DungeonGrid grid) {
-        ArrayList<DungeonRoomPoint> points = getAllPointsInDungeon();
-        ArrayList<DungeonRoomInstance> usedRooms = getBloodRushPath();
-        for (DungeonRoomInstance instance : usedRooms) {
-            addRoomToNetwork(instance);
-        }
-        attemptCornerPathing(dungeon, grid);
-    }
-
-    public void attemptCornerPathing(Dungeon dungeon, DungeonGrid grid) {
-        DungeonRoomInstance selectedRoom;
-        Location location = grid.getLocationGrid()[0][0];
-        if (!getRoomNetwork().contains(DungeonRoomInstance.getRoomFromLocation(dungeon, location))) {
-            selectedRoom = DungeonRoomInstance.getRoomFromLocation(dungeon, location);
-            assert selectedRoom != null;
-            connectNextRooms(dungeon, selectedRoom, getBloodRushPath());
-        }
-        location = grid.getLocationGrid()[0][5];
-        if (!getRoomNetwork().contains(DungeonRoomInstance.getRoomFromLocation(dungeon, location))) {
-            selectedRoom = DungeonRoomInstance.getRoomFromLocation(dungeon, location);
-            assert selectedRoom != null;
-            connectNextRooms(dungeon, selectedRoom, getBloodRushPath());
-        }
-        location = grid.getLocationGrid()[5][0];
-        if (!getRoomNetwork().contains(DungeonRoomInstance.getRoomFromLocation(dungeon, location))) {
-            selectedRoom = DungeonRoomInstance.getRoomFromLocation(dungeon, location);
-            assert selectedRoom != null;
-            connectNextRooms(dungeon, selectedRoom, getBloodRushPath());
-        }
-        location = grid.getLocationGrid()[5][5];
-        if (!getRoomNetwork().contains(DungeonRoomInstance.getRoomFromLocation(dungeon, location))) {
-            selectedRoom = DungeonRoomInstance.getRoomFromLocation(dungeon, location);
-            assert selectedRoom != null;
-            connectNextRooms(dungeon, selectedRoom, getBloodRushPath());
-        }
-    }
-
-    public void connectToBloodPath(Dungeon dungeon, ArrayList<DungeonRoomInstance> path) {
-        path.removeAll(null);
-        if (!path.isEmpty()) {
-            DungeonRoomInstance instance = path.get(path.size() - 1);
-            ArrayList<DungeonRoomPoint> validPoints = checkRoomHasBloodRoomPathTouching(dungeon, instance);
-            if (validPoints == null) {
-                path.remove(instance);
-                connectToBloodPath(dungeon, path);
-            } else {
-                DungeonDoor.addDungeonDoor(dungeon, validPoints.get(0), validPoints.get(1));
-            }
-        } else {
-            // implement this logic not even attempted yet
-            Common.log("No way to connect path to blood rush path");
-        }
-    }
-
-    public void connectNextRooms(Dungeon dungeon, DungeonRoomInstance instance, ArrayList<DungeonRoomInstance> used) {
-        ArrayList<DungeonRoomInstance> possibilities = new ArrayList<>();
-        ArrayList<DungeonRoomInstance> path = new ArrayList<>();
-        ArrayList<DungeonRoomInstance> usedRooms;
-        usedRooms = used;
-        DungeonRoomInstance currentCheck = null;
-        DungeonRoomPoint currentCheckPoint;
-        Location location;
-        boolean stopMain = false;
-        for (DungeonRoomPoint point : instance.getDungeonRoomPoints()) {
-            for (int i = 0; i < 4; i++) {
-                if (i == 0) {
-                    location = point.getCenterLocation().clone().add(-34.0, 0.0, 0.0);
-                } else if (i == 1) {
-                    location = point.getCenterLocation().clone().add(34.0, 0.0, 0.0);
-                } else if (i == 2) {
-                    location = point.getCenterLocation().clone().add(0.0, 0.0, -34.0);
-                } else {
-                    location = point.getCenterLocation().clone().add(0.0, 0.0, 34.0);
-                }
-                if (dungeon.isLocationPartOfDungeon(dungeon, location)) {
-                    currentCheck = DungeonRoomInstance.getRoomFromLocation(dungeon, location);
-                    currentCheckPoint = getPointFromLocation(dungeon, location);
-                    Common.log("Checking room at " + location.getX() + " " + location.getZ());
-                    if (!usedRooms.contains(currentCheck) && !instance.getDungeonRoomPoints().contains(currentCheckPoint) && !possibilities.contains(currentCheck) && !getBloodCenter().equals(location) && !getLobbyCenter().equals(location)) {
-                        Common.log("Checking room passed");
-                        possibilities.add(currentCheck);
-                        usedRooms.add(currentCheck);
-                        DungeonDoor.addDungeonDoor(dungeon, point, getPointFromLocation(dungeon, location));
-                        if (!getRoomNetwork().contains(DungeonRoomInstance.getRoomFromPoint(dungeon, point))) {
-                            addRoomToNetwork(DungeonRoomInstance.getRoomFromPoint(dungeon, point));
-                        }
-                        if (!getRoomNetwork().contains(currentCheck)) {
-                            addRoomToNetwork(currentCheck);
-                        }
-                        if (!path.contains(DungeonRoomInstance.getRoomFromPoint(dungeon, point))) {
-                            path.add(DungeonRoomInstance.getRoomFromPoint(dungeon, point));
-                        }
-                        if (!path.contains(currentCheck)) {
-                            path.add(currentCheck);
-                        }
-                        stopMain = true;
-                        break;
-                    }
-                }
-            }
-            //last thing I added 3/31
-            if (stopMain) {
-                break;
-            }
-        }
-        if (possibilities.isEmpty() || currentCheck == null) {
-            connectToBloodPath(dungeon, path);
-        } else {
-            connectNextRooms(dungeon, currentCheck, usedRooms);
-        }
-
-    }
-
-    public ArrayList<DungeonRoomPoint> checkRoomHasBloodRoomPathTouching(Dungeon dungeon, DungeonRoomInstance instance) {
-        Location side1;
-        Location side2;
-        Location side3;
-        Location side4;
-        ArrayList<DungeonRoomPoint> points = new ArrayList<>();
-        for (DungeonRoomPoint point : instance.getDungeonRoomPoints()) {
-            side1 = point.getCenterLocation().clone().add(34.0, 0.0, 0.0);
-            side2 = point.getCenterLocation().clone().add(-34.0, 0.0, 0.0);
-            side3 = point.getCenterLocation().clone().add(0.0, 0.0, 34.0);
-            side4 = point.getCenterLocation().clone().add(0.0, 0.0, -34.0);
-            if (getBloodRushPath().contains(DungeonRoomInstance.getRoomFromLocation(dungeon, side1))) {
-                points.add(point);
-                points.add(getPointFromLocation(dungeon, side1));
-                return points;
-            }
-            if (getBloodRushPath().contains(DungeonRoomInstance.getRoomFromLocation(dungeon, side2))) {
-                points.add(point);
-                points.add(getPointFromLocation(dungeon, side2));
-                return points;
-            }
-            if (getBloodRushPath().contains(DungeonRoomInstance.getRoomFromLocation(dungeon, side3))) {
-                points.add(point);
-                points.add(getPointFromLocation(dungeon, side3));
-                return points;
-            }
-            if (getBloodRushPath().contains(DungeonRoomInstance.getRoomFromLocation(dungeon, side4))) {
-                points.add(point);
-                points.add(getPointFromLocation(dungeon, side4));
-                return points;
-            }
-        }
-        return null;
-    }
-    */
-
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
     public String reverseDirection(String direction) {
         if (direction.equalsIgnoreCase("Move left")) {
             return "Move right";
@@ -586,15 +483,12 @@ public class DungeonPathfinding {
 
         midPoint.getBlock().setType(Material.REDSTONE_BLOCK);
         //addDungeonDoor(dungeon, midPoint);
-
-        setCurrentEvaluationPoint(getPointFromLocation(dungeon, nextLocation));
+        DungeonRoomPoint nextPoint = getPointFromLocation(dungeon, nextLocation);
+        setCurrentEvaluationPoint(nextPoint);
         roomInstance = DungeonRoomInstance.getRoomFromLocation(dungeon, nextLocation);
         bloodRushPath.add(roomInstance);
+        DungeonLobbyDoor.addLobbyDungeonDoor(dungeon, getPointFromLocation(dungeon, lobbyCenter), nextPoint);
         setCurrentRoom(roomInstance);
-    }
-
-    public void runBloodRushPath(Dungeon dungeon, DungeonGrid grid) {
-
     }
 
     public DungeonRoomPoint findBestPoint(DungeonRoomInstance instance) {
@@ -603,33 +497,35 @@ public class DungeonPathfinding {
         double chosenZ;
         double x;
         double z;
-        ArrayList<DungeonRoomPoint> points = instance.getDungeonRoomPoints();
-        points.remove(getCurrentEvaluationPoint());
-        String direction = getDirectionToMove();
-        for (DungeonRoomPoint point : points) {
-            x = point.getCenterLocation().getX();
-            z = point.getCenterLocation().getZ();
-            chosenX = chosenPoint.getCenterLocation().getX();
-            chosenZ = chosenPoint.getCenterLocation().getZ();
-            if (direction.equalsIgnoreCase("Move left")) {
-                //prioritize -x
-                if (x < chosenX && z == chosenZ) {
-                    chosenPoint = point;
-                }
-            } else if (direction.equalsIgnoreCase("Move right")) {
-                //prioritize X
-                if (x > chosenX && z == chosenZ) {
-                    chosenPoint = point;
-                }
-            } else if (direction.equalsIgnoreCase("Move top")) {
-                //prioritize -z
-                if (z < chosenZ && x == chosenX) {
-                    chosenPoint = point;
-                }
-            } else if (direction.equalsIgnoreCase("Move bottom")) {
-                //prioritize z
-                if (z > chosenZ && x == chosenX) {
-                    chosenPoint = point;
+            if (instance != null) {
+            ArrayList<DungeonRoomPoint> points = instance.getDungeonRoomPoints();
+            points.remove(getCurrentEvaluationPoint());
+            String direction = getDirectionToMove();
+            for (DungeonRoomPoint point : points) {
+                x = point.getCenterLocation().getX();
+                z = point.getCenterLocation().getZ();
+                chosenX = chosenPoint.getCenterLocation().getX();
+                chosenZ = chosenPoint.getCenterLocation().getZ();
+                if (direction.equalsIgnoreCase("Move left")) {
+                    //prioritize -x
+                    if (x < chosenX && z == chosenZ) {
+                        chosenPoint = point;
+                    }
+                } else if (direction.equalsIgnoreCase("Move right")) {
+                    //prioritize X
+                    if (x > chosenX && z == chosenZ) {
+                        chosenPoint = point;
+                    }
+                } else if (direction.equalsIgnoreCase("Move top")) {
+                    //prioritize -z
+                    if (z < chosenZ && x == chosenX) {
+                        chosenPoint = point;
+                    }
+                } else if (direction.equalsIgnoreCase("Move bottom")) {
+                    //prioritize z
+                    if (z > chosenZ && x == chosenX) {
+                        chosenPoint = point;
+                    }
                 }
             }
         }
@@ -730,6 +626,8 @@ public class DungeonPathfinding {
     }
 
     //changed by adding or = to's
+    // changed all from or = to bloodx 5/25/2024 to test
+    // added back or = to because it's negated
     public boolean ensurePriorityNotPastBlood(DungeonRoomPoint point, String priorityDirection) {
         if (priorityDirection.equalsIgnoreCase("Move left")) {
             //prioritize -x
@@ -747,29 +645,6 @@ public class DungeonPathfinding {
         return false;
     }
 
-    public void runBloodRushPathing(Dungeon dungeon, DungeonGrid grid) {
-        int iterator = 0;
-        boolean atBlood = false;
-        String alignBloodDirection;
-        // top = -z, right = +x, bottom = +z, left = -x
-        this.directionToMove = "Move " + grid.getBloodRoom(dungeon).getShape().getDirection();
-        this.priorityDirection = getPriorityDirection(lobbyCenter, bloodCenter, getDirectionToMove());
-        addBloodRushPath(this.currentRoom);
-        while (!atBlood) {
-            if (iterator != 0) {
-                if (getCurrentRoom().equals(DungeonRoomInstance.getRoomFromLocation(dungeon, getBloodCenter()))) {
-                    atBlood = true;
-                } else {
-                    this.currentRoom = findNextBloodRushRoom(dungeon, grid, iterator);
-                    iterator++;
-                }
-            } else {
-                this.currentRoom = findNextBloodRushRoom(dungeon, grid, iterator);
-                iterator++;
-            }
-        }
-    }
-
     public Location findNextDirectionalLocation(Location location, String direction) {
         Location locations;
         if (directionToMove.equalsIgnoreCase("Move left")) {
@@ -782,42 +657,6 @@ public class DungeonPathfinding {
             locations = location.clone().add(0.0, 0.0, 34.0);
         }
         return locations;
-    }
-
-    public DungeonRoomInstance findNextBloodRushRoom(Dungeon dungeon, DungeonGrid grid, int iterator) {
-        Location findNext;
-        DungeonRoomInstance roomInstance = null;
-        if (iterator == 0) {
-            this.currentRoom = grid.getLobbyRoom(dungeon);
-            if (directionToMove.equalsIgnoreCase("Move left")) {
-                findNext = dungeon.getLobbyLocation().clone().add(-34.0, 0.0, 0.0);
-            } else if (directionToMove.equalsIgnoreCase("Move right")) {
-                findNext = dungeon.getLobbyLocation().clone().add(34.0, 0.0, 0.0);
-            } else if (directionToMove.equalsIgnoreCase("Move top")) {
-                findNext = dungeon.getLobbyLocation().clone().add(0.0, 0.0, -34.0);
-            } else {
-                findNext = dungeon.getLobbyLocation().clone().add(0.0, 0.0, 34.0);
-            }
-            Location mid = DungeonGeneration.findMidPoint(dungeon.getLobbyLocation(), findNext);
-            mid.getBlock().setType(Material.REDSTONE_BLOCK);
-            roomInstance = DungeonRoomInstance.getRoomFromLocation(dungeon, findNext);
-        } else {
-            //Start testing logic here.
-            /*
-            DungeonRoomPoint point = furthestDirectionalPoint(currentRoom.getDungeonRoomPoints(), directionToMove);
-            DungeonRoomPoint nextPoint;
-            if (this.priorityDirection.equalsIgnoreCase("none") || (point.getCenterLocation().getX() == bloodX || point.getCenterLocation().getZ() == bloodCenter.getZ())) {
-                nextPoint = findNextPointFromCurrentPoint(dungeon, point, this.directionToMove);
-            } else {
-                nextPoint = findNextPointFromCurrentPoint(dungeon, point, this.priorityDirection);
-            }
-            Location mid = DungeonGeneration.findMidPoint(point.getCenterLocation(), nextPoint.getCenterLocation());
-            mid.getBlock().setType(Material.REDSTONE_BLOCK);
-            roomInstance = DungeonRoomInstance.getRoomFromPoint(dungeon, nextPoint);
-
-             */
-        }
-        return roomInstance;
     }
 
     public static String getPriorityDirection(Location lobbyLocation, Location bloodLocation, String directionToMove) {
@@ -846,55 +685,6 @@ public class DungeonPathfinding {
         return prioritize;
     }
 
-    /*
-    public DungeonRoomPoint furthestDirectionalPoint(ArrayList<DungeonRoomPoint> points, String direction) {
-        DungeonRoomPoint closestPoint = points.get(0);
-        double closestCoord;
-        double lastPoint = 0.0;
-        double trackerX;
-        double trackerZ;
-        for (DungeonRoomPoint point : points) {
-            trackerX = point.getCenterLocation().getX();
-            trackerZ = point.getCenterLocation().getZ();
-            if (!(points.indexOf(point) == 0)) {
-                if (direction.equalsIgnoreCase("Move left")) {
-                    if (trackerX < lastPoint && getCurrentPoint().getCenterLocation().getZ() == trackerZ) {
-                        closestPoint = point;
-                    }
-                    lastPoint = trackerX;
-                } else if (direction.equalsIgnoreCase("Move right")) {
-                    if (trackerX > lastPoint && getCurrentPoint().getCenterLocation().getZ() == trackerZ) {
-                        closestPoint = point;
-                    }
-                    lastPoint = trackerX;
-                } else if (direction.equalsIgnoreCase("Move top")) {
-                    if (trackerZ < lastPoint && getCurrentPoint().getCenterLocation().getX() == trackerX) {
-                        closestPoint = point;
-                    }
-                    lastPoint = trackerZ;
-                } else {
-                    if (trackerZ > lastPoint && getCurrentPoint().getCenterLocation().getX() == trackerX) {
-                        closestPoint = point;
-                    }
-                    lastPoint = trackerZ;
-                }
-            } else {
-                if (direction.equalsIgnoreCase("Move left")) {
-                    closestCoord = point.getCenterLocation().getX();
-                } else if (direction.equalsIgnoreCase("Move right")) {
-                    closestCoord = point.getCenterLocation().getX();
-                } else if (direction.equalsIgnoreCase("Move top")) {
-                    closestCoord = point.getCenterLocation().getZ();
-                } else {
-                    closestCoord = point.getCenterLocation().getZ();
-                }
-                lastPoint = closestCoord;
-            }
-        }
-        return closestPoint;
-    }
-    */
-
     public DungeonRoomPoint findNextPointFromCurrentPoint(Dungeon dungeon, DungeonRoomPoint currentPoint, String direction) {
         Location toLocation;
         Location fromLocation = currentPoint.getCenterLocation();
@@ -907,6 +697,14 @@ public class DungeonPathfinding {
         } else {
             toLocation = fromLocation.clone().add(0.0, 0.0, 34.0);
         }
+        if (getPointFromLocation(dungeon, toLocation) == null) {
+            Common.log("INFINITE ERROR >> Tried to " + direction + " from " + fromLocation.getX() + ", " + fromLocation.getZ() + " to" + toLocation.getX() + ", " + toLocation.getZ());
+            if (direction.equals(directionToMove)) {
+                return findNextPointFromCurrentPoint(dungeon, currentPoint, priorityDirection);
+            } else if (direction.equals(priorityDirection)) {
+                return findNextPointFromCurrentPoint(dungeon, currentPoint, directionToMove);
+            }
+        }
         return getPointFromLocation(dungeon, toLocation);
     }
 
@@ -917,12 +715,6 @@ public class DungeonPathfinding {
             }
         }
         return null;
-    }
-
-    public void addBloodRushPath(DungeonRoomInstance instance) {
-        ArrayList<DungeonRoomInstance> temp = getBloodRushPath();
-        temp.add(instance);
-        setBloodRushPath(temp);
     }
 
 }

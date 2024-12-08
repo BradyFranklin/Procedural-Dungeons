@@ -1,4 +1,4 @@
-package org.ninenetwork.infinitedungeons.mob;
+package org.ninenetwork.infinitedungeons.mob.boss.mini;
 
 import net.citizensnpcs.api.CitizensAPI;
 import net.citizensnpcs.api.ai.AttackStrategy;

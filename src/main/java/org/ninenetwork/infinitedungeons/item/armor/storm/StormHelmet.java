@@ -1,9 +1,7 @@
-package org.ninenetwork.infinitedungeons.item.armor;
+package org.ninenetwork.infinitedungeons.item.armor.storm;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
-import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.mineacademy.fo.plugin.SimplePlugin;
@@ -14,7 +12,10 @@ import org.ninenetwork.infinitedungeons.item.ItemType;
 import org.ninenetwork.infinitedungeons.playerstats.PlayerStat;
 import org.ninenetwork.infinitedungeons.settings.Settings;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
 
 public class StormHelmet extends AbstractDungeonItem {
 
@@ -23,7 +24,7 @@ public class StormHelmet extends AbstractDungeonItem {
     }
 
     @Override
-    protected ItemStack generateItem(ItemStack item, Player player) {
+    protected ItemStack generateItem(ItemStack item) {
         SkullMeta meta = (SkullMeta) item.getItemMeta();
         String name = ChatColor.translateAlternateColorCodes('&', Settings.Items.STORMHELMETNAME);
         meta.setDisplayName(name);
@@ -60,7 +61,7 @@ public class StormHelmet extends AbstractDungeonItem {
     }
 
     @Override
-    protected ItemType getItemType() {
+    public ItemType getItemType() {
         return ItemType.ARMOR;
     }
 

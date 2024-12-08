@@ -1,4 +1,4 @@
-package org.ninenetwork.infinitedungeons.map;
+package org.ninenetwork.infinitedungeons.world;
 
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.MaxChangedBlocksException;
@@ -27,7 +27,6 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.mineacademy.fo.Common;
-import org.mineacademy.fo.FileUtil;
 import org.mineacademy.fo.Valid;
 import org.mineacademy.fo.model.ChunkedTask;
 import org.ninenetwork.infinitedungeons.dungeon.Dungeon;
@@ -65,9 +64,6 @@ public class SchematicManager {
         }
     }
 
-    /*
-     * Utility to convert the given region into a worldedit region
-     */
     private static com.sk89q.worldedit.regions.Region toWorldEditRegion(org.mineacademy.fo.region.Region region) {
         final BlockVector3 min = toWorldEditVector(region.getPrimary());
         final BlockVector3 max = toWorldEditVector(region.getSecondary());
@@ -75,13 +71,6 @@ public class SchematicManager {
         return new CuboidRegion(min, max);
     }
 
-    /**
-     * Paste the schematic file content starting from the given location
-     * This pastes all blocks at once.
-     *
-     * @param to
-     * @param schematicFile
-     */
     public static void paste(Location to, File schematicFile, int orientation) {
         try (EditSession session = createEditSession(to.getWorld())) {
             double x = 0.0;
@@ -97,7 +86,6 @@ public class SchematicManager {
                 z = 30.0; //
             }
             final Clipboard clipboard = loadSchematic(schematicFile);
-            BlockVector3 blockVector3 = BlockVector3.at(clipboard.getOrigin().x(), clipboard.getOrigin().y(), clipboard.getOrigin().z());
             Location location = to.clone();
             location.setX(to.getX() + (x));
             location.setY(to.getY());
@@ -106,7 +94,6 @@ public class SchematicManager {
             if (orientation != 0) {
                 holder.setTransform(new AffineTransform().rotateY(-(orientation * 90)));
             }
-            holder.getClipboard().setOrigin(blockVector3);
             final Operation operation = holder
                     .createPaste(session)
                     .ignoreAirBlocks(true)
@@ -133,7 +120,6 @@ public class SchematicManager {
                 z = 0;
             }
             final Clipboard clipboard = loadSchematic(schematicFile);
-            BlockVector3 blockVector3 = BlockVector3.at(clipboard.getOrigin().x(), clipboard.getOrigin().y(), clipboard.getOrigin().z());
             Location location = to.clone();
             location.setX(to.getX() + (x));
             location.setY(to.getY());
@@ -142,7 +128,6 @@ public class SchematicManager {
             if (orientation != 0) {
                 holder.setTransform(new AffineTransform().rotateY(-(orientation * 90)));
             }
-            holder.getClipboard().setOrigin(blockVector3);
             final Operation operation = holder
                     .createPaste(session)
                     .ignoreAirBlocks(true)
@@ -157,6 +142,64 @@ public class SchematicManager {
         } catch (Throwable t) {
             t.printStackTrace();
         }
+    }
+
+    public static void clearDoorAreas(Location midPoint, String xOrZ) {
+        double b;
+        Location location;
+        if (xOrZ.equalsIgnoreCase("x")) {
+            midPoint = midPoint.clone().add(-1.0, 1.0, 0.0);
+        } else if (xOrZ.equalsIgnoreCase("z")) {
+            midPoint = midPoint.clone().add(0.0, 1.0, -1.0);
+        }
+        for (double h = 0.0; h < 3.0; h++) {
+            for (double a = 0.0; a < 3.0; a++) {
+                for (double i = 0.0; i < 9.0; i++) {
+                    if (i >= 5.0) {
+                        b = -((i + 1.0) - 5.0);
+                    } else {
+                        b = i;
+                    }
+                    if (xOrZ.equalsIgnoreCase("x")) {
+                        location = midPoint.clone().add(a, h, b);
+                    } else {
+                        location = midPoint.clone().add(b, h, a);
+                    }
+                    location.getBlock().setType(Material.AIR);
+                }
+            }
+        }
+
+            /*
+            for (double h = 0.0; h < 3.0; h++) {
+                for (double a = 0.0; a < 8.0; a++) {
+                    for (double i = 0.0; i < 5.0; i++) {
+                        if (a >= 4.0) {
+                            b = -i;
+                        } else {
+                            b = i;
+                        }
+                        Location location = midPoint.clone().add(a, h, b);
+                        location.getBlock().setType(Material.AIR);
+                    }
+                }
+            }
+        } else {
+            midPoint = midPoint.clone().add(0.0, 1.0, -1.0);
+            for (double h = 0.0; h < 3.0; h++) {
+                for (double a = 0.0; a < 8.0; a++) {
+                    for (double i = 0.0; i < 5.0; i++) {
+                        if (a >= 4.0) {
+                            b = -i;
+                        } else {
+                            b = i;
+                        }
+                        Location location = midPoint.clone().add(b, h, a);
+                        location.getBlock().setType(Material.AIR);
+                    }
+                }
+            }
+           */
     }
 
     public static void resetToAir(Dungeon dungeon) {
@@ -170,54 +213,6 @@ public class SchematicManager {
         }
     }
 
-    /*
-    public static void paste(Location to, File schematicFile, int orientation) {
-
-        try (EditSession session = createEditSession(to.getWorld())) {
-            double x = 0.0;
-            double z = 0.0;
-            if (orientation == 1) {
-                x = 30.0;
-                z = 0;
-            } else if (orientation == 2) {
-                x = 30.0;
-                z = 30;
-            } else if (orientation == 3) {
-                x = 0;
-                z = 30;
-            }
-            final Clipboard clipboard = loadSchematic(schematicFile);
-            BlockVector3 blockVector3 = BlockVector3.at(clipboard.getOrigin().getX(), clipboard.getOrigin().getY(), clipboard.getOrigin().getZ());
-            Location location = to.clone().add(to.getX() + (x), to.getY(), to.getZ() + (z));
-            ClipboardHolder holder = new ClipboardHolder(clipboard);
-            if (orientation != 0) {
-                holder.setTransform(new AffineTransform().rotateY(-(orientation * 90)));
-            }
-            holder.getClipboard().setOrigin(blockVector3);
-            final Operation operation = holder
-                    .createPaste(session)
-                    .ignoreAirBlocks(true)
-                    .to(toWorldEditVector(location))
-                    .build();
-
-            Common.log("Original Location: " + to.getX() + ", " + to.getZ());
-            Common.log("Pasted to " + location.getX() + ", " + location.getZ());
-
-            Operations.complete(operation);
-
-        } catch (Throwable t) {
-            t.printStackTrace();
-        }
-    }
-    */
-
-    /**
-     * Place the given schematic file one-by-one to fit the given region,
-     * this uses a chunked task for maximum performance.
-     *
-     * @param region
-     * @param schematicFile
-     */
     public static void paste(org.mineacademy.fo.region.Region region, File schematicFile) {
 
         Common.runAsync(() -> {
@@ -229,7 +224,6 @@ public class SchematicManager {
 
             final EditSession session = createEditSession(region.getWorld());
 
-            // Restore each block individually, in chunks
             final ChunkedTask task = new ChunkedTask(50_000) {
 
                 @Override
@@ -255,14 +249,10 @@ public class SchematicManager {
                 }
             };
 
-            // Run the chain on the main thread for safety
             Common.runLater(task::startChain);
         });
     }
 
-    /*
-     * Load schematic from the given file
-     */
     private static Clipboard loadSchematic(File file) {
 
         try {
@@ -280,9 +270,6 @@ public class SchematicManager {
         }
     }
 
-    /*
-     * Create a new edit session
-     */
     private static EditSession createEditSession(org.bukkit.World bukkitWorld) {
         final BukkitWorld world = new BukkitWorld(bukkitWorld);
         final EditSession session = WorldEdit.getInstance().newEditSession(world);
@@ -292,9 +279,6 @@ public class SchematicManager {
         return session;
     }
 
-    /*
-     * Convert location to block vector
-     */
     private static BlockVector3 toWorldEditVector(@NonNull Location location) {
         return BlockVector3.at(location.getBlockX(), location.getBlockY(), location.getBlockZ());
     }

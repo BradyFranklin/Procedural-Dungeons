@@ -12,6 +12,7 @@ import org.mineacademy.fo.menu.button.Button;
 import org.mineacademy.fo.menu.model.ItemCreator;
 import org.mineacademy.fo.remain.CompMaterial;
 import org.ninenetwork.infinitedungeons.PlayerCache;
+import org.ninenetwork.infinitedungeons.classes.DungeonClassUtil;
 
 import java.util.ArrayList;
 
@@ -153,14 +154,14 @@ public class DungeonClassMenu extends Menu {
         PlayerCache cache = PlayerCache.from(player);
         assert meta != null;
         meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&7[Lvl " + getClassNameLevel(className,player) + "] " + "&a" + className));
-        meta.setLore(generateLore(className, cache.getDungeonClass()));
+        meta.setLore(generateLore(player, className, cache.getCurrentDungeonClass()));
         item.setItemMeta(meta);
         return item;
     }
 
     private static void setPlayerDungeonClass(Player player, String className) {
         PlayerCache cache = PlayerCache.from(player);
-        cache.setDungeonClass(className);
+        cache.setCurrentDungeonClass(className);
     }
 
     private static int getClassNameLevel(String className, Player player) {
@@ -180,10 +181,10 @@ public class DungeonClassMenu extends Menu {
     }
 
     //unfinished
-    private static ArrayList<String> generateLore(String className, String selected) {
+    private static ArrayList<String> generateLore(Player player, String className, String selected) {
         ArrayList<String> lore = new ArrayList<>();
-        lore.add(ChatColor.translateAlternateColorCodes('&', "&f&lClass Passives"));
         if (className.equalsIgnoreCase("Healer")) {
+            lore.add(ChatColor.translateAlternateColorCodes('&', "&f&lClass Passives"));
             lore.add(ChatColor.translateAlternateColorCodes('&', "&8&l* &aRenew"));
             lore.add(ChatColor.translateAlternateColorCodes('&', "&8&l* &aHealing Aura"));
             lore.add(ChatColor.translateAlternateColorCodes('&', "&8&l* &aRevive"));
@@ -201,7 +202,17 @@ public class DungeonClassMenu extends Menu {
         } else if (className.equalsIgnoreCase("Mage")) {
 
         } else if (className.equalsIgnoreCase("Berserk")) {
+            lore.add(Common.colorize("&7Melee Damage: &c+" + (DungeonClassUtil.getBerserkMeleeBoost(player) * 100) + "%"));
+            lore.add(" ");
+            lore.add(Common.colorize("&f&lClass Passives"));
+            lore.add(Common.colorize("&8✦ &aBlood Lust"));
+            lore.add(Common.colorize("&8✦ &aLust For Blood"));
+            lore.add(Common.colorize("&8✦ &aIndomitable"));
+            lore.add(" ");
+            lore.add(Common.colorize("&f&lDungeon Orb Ability"));
+            lore.add(Common.colorize("&8✦ &6Ragnarok"));
 
+//Your next hit after killing a monster deals 20-40% increased damage. This bonus will expire after 5 seconds. Reduces the cooldown remaining on Throwing Axe by 1 second on activation. Heals you for 3% of your missing SkyBlock icons health.pngHealth every melee hit.
         } else if (className.equalsIgnoreCase("Archer")) {
 
         } else if (className.equalsIgnoreCase("Tank")) {

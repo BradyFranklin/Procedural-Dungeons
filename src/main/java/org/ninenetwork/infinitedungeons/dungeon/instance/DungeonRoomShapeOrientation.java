@@ -17,8 +17,6 @@ public class DungeonRoomShapeOrientation {
     @Setter @Getter
     int rotations;
 
-    ArrayList<Location> relativeLocationsNeeded;
-
     public DungeonRoomShapeOrientation() {
     }
 

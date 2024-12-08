@@ -1,75 +1,100 @@
 package org.ninenetwork.infinitedungeons.dungeon;
 
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.mineacademy.fo.Common;
-import org.mineacademy.fo.ItemUtil;
-import org.mineacademy.fo.remain.Remain;
-import org.mineacademy.fo.settings.SimpleSettings;
 import org.ninenetwork.infinitedungeons.PlayerCache;
+import org.ninenetwork.infinitedungeons.item.CustomDungeonItemManager;
+import org.ninenetwork.infinitedungeons.enchant.DungeonEnchant;
+import org.ninenetwork.infinitedungeons.item.ItemLoreGenerator;
+import org.ninenetwork.infinitedungeons.party.DungeonParty;
+import org.ninenetwork.infinitedungeons.party.DungeonQueue;
+import org.ninenetwork.infinitedungeons.playerstats.PlayerStatSource;
+import org.ninenetwork.infinitedungeons.playerstats.PlayerStatSourceDatabase;
 
-import java.util.List;
-
-import static org.mineacademy.fo.Valid.checkBoolean;
-import static org.mineacademy.fo.Valid.checkNotNull;
+import java.util.ArrayList;
+import java.util.Objects;
 
 public class DungeonFunctions {
 
-    public Dungeon createDungeon(String dungeonName, DungeonType type) {
-        checkBoolean(!Dungeon.isDungeonLoaded(dungeonName), "Dungeon: '" + dungeonName + "' already exists!");
-        Dungeon dungeon = Dungeon.createDungeon(dungeonName, type);
-        Common.log("Created " + type.getName() + " dungeon '" + dungeonName + "'!");
-        return dungeon;
+    public static void refreshPlayer(Player player) {
+        PlayerStatSourceDatabase.getInstance().removeAllStatsFromSource(player, PlayerStatSource.BLESSING);
     }
 
-    public void removeDungeon(String dungeonName) {
-        this.checkDungeonExists(dungeonName);
-        Dungeon dungeon = Dungeon.findByName(dungeonName);
-        if (!dungeon.isStopped()) {
-            dungeon.stop(DungeonStopReason.COMMAND);
+    public static void initializeStatMapping(Player player) {
+        PlayerStatSourceDatabase manager = PlayerStatSourceDatabase.getInstance();
+
+    }
+
+    public static void addSecretToRoom(String roomName, Location secretLocation) {
+        DungeonRoom dungeonRoom = DungeonRoom.findByName(roomName);
+        if (dungeonRoom != null) {
+            if (dungeonRoom.getSecrets().contains(secretLocation)) {
+                dungeonRoom.removeSecret(secretLocation);
+            }
+            dungeonRoom.addSecret(secretLocation);
         }
-        Dungeon.removeDungeon(dungeonName);
-        Common.log("Removed dungeon '" + dungeonName + "'!");
     }
 
-    public void dungeonJoinPlayers(Dungeon dungeon, List<Player> dungeonParty) {
-        checkBoolean(dungeonParty.size() <= 5 && !dungeonParty.isEmpty());
-        for (Player player : dungeonParty) {
-            dungeon.joinPlayer(player, DungeonJoinMode.PLAYING);
+    public static void removeAllSecretsFromRoom(String roomName) {
+        DungeonRoom dungeonRoom = DungeonRoom.findByName(roomName);
+        if (dungeonRoom != null) {
+            ArrayList<Location> secrets = new ArrayList<>();
+            dungeonRoom.setSecrets(secrets);
+            Common.log("Removed all secrets from room " + dungeonRoom.getName());
         }
-        dungeon.start();
     }
 
-    public void generateDungeon(Dungeon dungeon) {
-        DungeonGeneration generator = new DungeonGeneration();
-        generator.preDungeonInitialization(dungeon, 7);
-        generator.dungeonInitialization(dungeon, 7);
+    public static void quickEnchantLoreChecker(Player player, String enchantName) {
+        ItemStack item = Objects.requireNonNull(player.getEquipment()).getItemInMainHand();
+        ItemMeta meta = item.getItemMeta();
+        CustomDungeonItemManager itemManager = CustomDungeonItemManager.getInstance();
+        if (itemManager.checkIsDungeonItem(item)) {
+            Common.tell(player, "Class" + itemManager.findDungeonItem(item).getClass());
+            for (String s : meta.getLore()) {
+                Common.tell(player, s);
+            }
+            meta.setLore(ItemLoreGenerator.dungeonItemAddEnchantLoreGenerator(player, itemManager.findDungeonItem(item).getClass(), item, DungeonEnchant.valueOf(enchantName)));
+            item.setItemMeta(meta);
+        }
     }
 
-    public void dungeonPlayerLeave(Player player) {
-        final PlayerCache cache = PlayerCache.from(player);
-        checkBoolean(cache.hasDungeon(), "You are not playing any dungeon right now.");
-        cache.getCurrentDungeon().leavePlayer(player, DungeonLeaveReason.COMMAND);
-    }
-
-    public void dungeonTeleport(Player player, Dungeon dungeon) {
-        dungeon.teleport(player, dungeon.getLobbyLocation());
-    }
-
-    public void startDungeon(Dungeon dungeon) {
-        checkBoolean(dungeon.isLobby(), "Can only start dungeons in lobby! "
-                + dungeon.getName() + " is " + ItemUtil.bountifyCapitalized(dungeon.getState()).toLowerCase() + ".");
-        dungeon.start();
-    }
-
-    protected final Dungeon findDungeon(String name) {
-        Dungeon dungeon = Dungeon.findByName(name);
-        checkNotNull(dungeon, "No such dungeon: '" + name + "'. Available: " + Common.join(Dungeon.getDungeonNames()));
-        return dungeon;
-    }
-
-    protected final void checkDungeonExists(String dungeonName) {
-        checkBoolean(Dungeon.isDungeonLoaded(dungeonName),
-                "No such dungeon: '" + dungeonName + "'. Available: " + Common.join(Dungeon.getDungeonNames()));
+    public static void startDungeon(Player player, DungeonType dungeonType, int floor) {
+        PlayerCache cache = PlayerCache.from(player);
+        if (DungeonParty.hasParty(player)) {
+            DungeonParty party = DungeonParty.findPartyByPlayer(player);
+            if (party != null) {
+                if (DungeonParty.isLeader(player, party)) {
+                    int iterationProtection = 0;
+                    while (Dungeon.findByName(player.getName() + cache.getDungeonsCreated()) != null) {
+                        cache.setDungeonsCreated(cache.getDungeonsCreated() + 1);
+                        iterationProtection++;
+                        if (iterationProtection > 10) {
+                            break;
+                        }
+                    }
+                    Dungeon dungeon = Dungeon.createDungeon(player.getName() + cache.getDungeonsCreated(), dungeonType);
+                    dungeon.setFloor(floor);
+                    cache.setDungeonsCreated(cache.getDungeonsCreated() + 1);
+                    dungeon.initializeDungeonGeneration(dungeon, party, dungeonType, floor);
+                    if (DungeonQueue.getDungeonQueue().getPartiesInQueue().contains(party)) {
+                        DungeonQueue.getDungeonQueue().removePartyFromQueue(party);
+                    }
+                } else {
+                    Common.tell(player, "You must be leader in order to start the dungeon!");
+                }
+            } else {
+                Common.tell(player, "Something went wrong, please try again!");
+            }
+        } else {
+            DungeonParty party = new DungeonParty(player, dungeonType);
+            Dungeon dungeon = Dungeon.createDungeon(player.getName() + cache.getDungeonsCreated(), dungeonType);
+            dungeon.setFloor(floor);
+            cache.setDungeonsCreated(cache.getDungeonsCreated() + 1);
+            dungeon.initializeDungeonGeneration(dungeon, party, dungeonType, floor);
+        }
     }
 
 }

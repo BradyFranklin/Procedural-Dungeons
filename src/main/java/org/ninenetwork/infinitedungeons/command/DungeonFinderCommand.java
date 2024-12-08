@@ -18,7 +18,6 @@ public class DungeonFinderCommand extends SimpleCommand {
             Player player = (Player) sender;
             new DungeonMainMenu(player).displayTo(player);
         }
-
     }
 
 }

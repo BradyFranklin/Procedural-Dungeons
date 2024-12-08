@@ -11,11 +11,12 @@ import org.mineacademy.fo.model.ChunkedTask;
 import org.mineacademy.fo.model.HookManager;
 import org.mineacademy.fo.region.Region;
 import org.ninenetwork.infinitedungeons.InfiniteDungeonsPlugin;
-import org.ninenetwork.infinitedungeons.dungeon.instance.DungeonRoomInstance;
-import org.ninenetwork.infinitedungeons.dungeon.instance.DungeonRoomPoint;
-import org.ninenetwork.infinitedungeons.dungeon.instance.DungeonRoomShape;
-import org.ninenetwork.infinitedungeons.dungeon.instance.DungeonRoomShapeOrientation;
-import org.ninenetwork.infinitedungeons.map.SchematicManager;
+import org.ninenetwork.infinitedungeons.dungeon.instance.*;
+import org.ninenetwork.infinitedungeons.dungeon.secret.DungeonSecretInstance;
+import org.ninenetwork.infinitedungeons.world.SchematicManager;
+import org.ninenetwork.infinitedungeons.mob.DungeonMob;
+import org.ninenetwork.infinitedungeons.mob.DungeonMobRegistry;
+import org.ninenetwork.infinitedungeons.util.GeneralUtils;
 
 import java.io.File;
 import java.util.*;
@@ -27,10 +28,18 @@ import static org.mineacademy.fo.Valid.checkBoolean;
 public final class DungeonGeneration {
 
     private Location startingPosition;
+    private int floor;
 
     private Location spawnpoint;
 
     private ArrayList<Location> gridCentersRemaining;
+
+    private ArrayList<DungeonRoom> rooms1x1 = new ArrayList<>();
+    private ArrayList<DungeonRoom> rooms1x2 = new ArrayList<>();
+    private ArrayList<DungeonRoom> rooms1x3 = new ArrayList<>();
+    private ArrayList<DungeonRoom> rooms1x4 = new ArrayList<>();
+    private ArrayList<DungeonRoom> rooms2x2 = new ArrayList<>();
+    private ArrayList<DungeonRoom> rooms1x1x1 = new ArrayList<>();
 
     int current11Square = 0;
     int current22Square = 0;
@@ -47,41 +56,83 @@ public final class DungeonGeneration {
     }
 
     public void preDungeonInitialization(Dungeon dungeon, int floor) {
+        if (!dungeon.getDungeonIntegrity().isIntegrityMaintained()) {
+            return;
+        }
+        this.floor = floor;
         checkBoolean(HookManager.isWorldEditLoaded());
         checkBoolean(MinecraftVersion.atLeast(MinecraftVersion.V.v1_13));
         Location location = DungeonLastInstanceStorage.findNextInstanceLocation();
-        DungeonLastInstanceStorage.addDungeonInstanceCenter(dungeon.getName(), location);
+        DungeonLastInstanceStorage.addDungeonInstanceCenter(dungeon, location);
         dungeon.setLobbyLocation(location);
         ArrayList<Location> locations = generatePossibleRoomCenterLocations(location, floor);
         dungeon.initializeDungeonPoints(locations);
         dungeon.setPointLocations(locations);
-        dungeon.setDungeonScore(0);
+        DungeonMobRegistry.getInstance().addDungeon(dungeon);
+        if (!(locations.size() < (GeneralUtils.findRowsForFloor(floor, "h") * GeneralUtils.findRowsForFloor(floor, "v")))) {
+            int lastPointIndex = GeneralUtils.findRowsForFloor(floor, "h") * GeneralUtils.findRowsForFloor(floor, "v") - 1;
+            dungeon.setRegion(new Region(locations.get(0).clone().add(-15.0, 0.0, -15.0), locations.get(lastPointIndex).clone().add(15.0, 65.0, 15.0)));
+        }
     }
 
     public void dungeonInitialization(Dungeon dungeon, int floor) {
-        DungeonGrid grid = new DungeonGrid(dungeon.getName());
+        if (!dungeon.getDungeonIntegrity().isIntegrityMaintained()) {
+            return;
+        }
+        DungeonRoom.loadDungeonRooms();
+        DungeonGrid grid = new DungeonGrid(dungeon.getName(), floor);
         grid.initializePointsGrid(dungeon);
         grid.initializeLocationGrid(dungeon);
         grid.setPointsStillEmpty(dungeon.getPointTracking());
         //createDungeonRooms(dungeon, 1, grid);
-        DungeonRoom.loadDungeonRooms();
+        this.rooms1x1 = DungeonRoom.findAllByIdentifier("1x1_Square");
+        this.rooms1x2 = DungeonRoom.findAllByIdentifier("1x2_Rectangle");
+        this.rooms1x3 = DungeonRoom.findAllByIdentifier("1x3_Rectangle");
+        this.rooms1x4 = DungeonRoom.findAllByIdentifier("1x4_Rectangle");
+        this.rooms2x2 = DungeonRoom.findAllByIdentifier("2x2_Square");
+        this.rooms1x1x1 = DungeonRoom.findAllByIdentifier("1x1x1_L");
         addLobbyBlood(dungeon, grid);
         createDungeonRoomGrid(dungeon, 1, grid);
+        DungeonSecretInstance secretInstance = new DungeonSecretInstance(dungeon);
+        dungeon.setDungeonSecretInstance(secretInstance);
+    }
+
+    public void gridGenMiddleMan(Dungeon dungeon, DungeonGrid grid, int generationRounds) {
+        Common.runLater(10, new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (generationRounds < 3) {
+                    createDungeonRoomGrid(dungeon,generationRounds + 1, grid);
+                } else if (generationRounds == 3) {
+                    if (grid.checkGridValid(dungeon, grid)) {
+                        dungeon.getDungeonIntegrity().setGridGeneration(DungeonIntegrityStatus.COMPLETED);
+                        initializeDungeonRoomInstances(dungeon, grid);
+                    } else {
+                        // CHANGE THIS LATER, RESTART DUNGEON GENERATION IF FOR COMMENTED CONDITIONS
+                        dungeon.getDungeonIntegrity().setGridGeneration(DungeonIntegrityStatus.COMPLETED); // failed case
+                        initializeDungeonRoomInstances(dungeon, grid);
+                        //grid.clearShapeGrid(grid);
+                        //createDungeonRoomGrid(dungeon, 1, grid);
+                    }
+                }
+            }
+        });
     }
 
     public void createDungeonRoomGrid(Dungeon dungeon, int generationRound, DungeonGrid grid) {
+        if (!dungeon.getDungeonIntegrity().isIntegrityMaintained()) {
+            return;
+        }
+        dungeon.getDungeonIntegrity().setGridGeneration(DungeonIntegrityStatus.RUNNING);
         ArrayList<DungeonRoomPoint> dungeonRoomPoints = dungeon.getPointTracking();
-
         new BukkitRunnable() {
-
             int dungeonPointsIterator = 0;
             DungeonRoomPoint focusedPoint;
             final int generationRounds = generationRound;
-            //boolean lobbyCreated = false;
-
             @Override
             public void run() {
                 if (dungeonPointsIterator < dungeonRoomPoints.size()) {
+                    int integrity = 0;
                     boolean pointUnfilled = false;
                     focusedPoint = dungeonRoomPoints.get(dungeonPointsIterator);
                     while (!pointUnfilled) {
@@ -95,6 +146,13 @@ public final class DungeonGeneration {
                         } else {
                             pointUnfilled = true;
                         }
+                        if (integrity > 100) {
+                            Common.log("Issue generating dungeon, iterations over 100 while initializing grid");
+                            dungeon.getDungeonIntegrity().changeIntegrity(false, "GridGeneration");
+                            this.cancel();
+                            break;
+                        }
+                        integrity++;
                     }
                     if (!focusedPoint.isAlreadyUsed()) {
                         DungeonRoomShape shape = shapeGenerator(dungeon, focusedPoint, generationRounds, false);
@@ -103,9 +161,12 @@ public final class DungeonGeneration {
                         }
                     }
                 } else {
+                    gridGenMiddleMan(dungeon, grid, generationRounds);
+                    this.cancel();
+                    /*
                     if (generationRounds < 3) {
                         createDungeonRoomGrid(dungeon,generationRounds + 1, grid);
-                    } else if (generationRound == 3) {
+                    } else if (generationRound== 3) {
                         if (grid.checkGridValid(dungeon, grid)) {
                             initializeDungeonRoomInstances(dungeon, grid);
                         } else {
@@ -113,25 +174,32 @@ public final class DungeonGeneration {
                             createDungeonRoomGrid(dungeon, 1, grid);
                         }
                     }
-                    cancel();
+                    this.cancel();
+                    */
                 }
                 this.dungeonPointsIterator++;
             }
-        }.runTaskTimerAsynchronously(InfiniteDungeonsPlugin.getInstance(), 0L, 1L);
+        }.runTaskTimerAsynchronously(InfiniteDungeonsPlugin.getInstance(), 0L, 2L);
     }
 
     public void addLobbyBlood(Dungeon dungeon, DungeonGrid grid) {
+        if (!dungeon.getDungeonIntegrity().isIntegrityMaintained()) {
+            return;
+        }
+        dungeon.getDungeonIntegrity().setLobbyBloodInitialization(DungeonIntegrityStatus.RUNNING);
+        boolean lobbySuccess = false;
+        boolean bloodSuccess = false;
         Random rand = new Random();
         ArrayList<String> choices = new ArrayList<>(Arrays.asList("top", "left", "right"));
         String choice = choices.get(rand.nextInt(3));
-        int lobbySlot = DungeonGrid.chooseRandomOutsideSlotExceptBottom(choice);
-        String opposite = DungeonGrid.directionNeeded(lobbySlot);
-        ArrayList<Integer> slotsPossible = DungeonGrid.outsidePointsSpecificSide(opposite);
+        int lobbySlot = DungeonGrid.chooseRandomOutsideSlotExceptBottom(choice, this.floor);
+        String opposite = DungeonGrid.directionNeeded(lobbySlot, this.floor);
+        ArrayList<Integer> slotsPossible = DungeonGrid.outsidePointsSpecificSide(opposite, this.floor);
         int bloodSlot = slotsPossible.get(rand.nextInt(slotsPossible.size()));
-        DungeonRoomPoint point = grid.getPointGrid()[DungeonGrid.convertToRow(lobbySlot)][DungeonGrid.convertToColumn(lobbySlot)];
+        DungeonRoomPoint point = grid.getPointGrid()[DungeonGrid.convertToRow(lobbySlot, this.floor)][DungeonGrid.convertToColumn(lobbySlot, this.floor)];
         DungeonRoomShape lobbyShape = shapeGenerator(dungeon, point, 3, true);
         if (lobbyShape != null) {
-            lobbyShape.setRoomType("Lobby");
+            lobbyShape.setRoomType("lobby");
             lobbyShape.setDirection(choice);
             lobbyShape.setRoomIdentifier("1x1_Square");
             if (choice.equalsIgnoreCase("right")) {
@@ -143,11 +211,12 @@ public final class DungeonGeneration {
             }
             fillGrids(lobbyShape, grid);
             dungeon.setLobbyLocation(point.getCenterLocation());
+            lobbySuccess = true;
         }
-        DungeonRoomPoint point2 = grid.getPointGrid()[DungeonGrid.convertToRow(bloodSlot)][DungeonGrid.convertToColumn(bloodSlot)];
+        DungeonRoomPoint point2 = grid.getPointGrid()[DungeonGrid.convertToRow(bloodSlot, this.floor)][DungeonGrid.convertToColumn(bloodSlot, this.floor)];
         DungeonRoomShape bloodShape = shapeGenerator(dungeon, point2, 3, true);
         if (bloodShape != null) {
-            bloodShape.setRoomType("Blood");
+            bloodShape.setRoomType("blood");
             bloodShape.setDirection(opposite);
             bloodShape.setRoomIdentifier("1x1_Square");
             if (opposite.equalsIgnoreCase("right")) {
@@ -161,6 +230,13 @@ public final class DungeonGeneration {
             }
             fillGrids(bloodShape, grid);
             dungeon.setBloodLocation(point2.getCenterLocation());
+            bloodSuccess = true;
+        }
+        if (lobbySuccess && bloodSuccess) {
+            dungeon.getDungeonIntegrity().setLobbyBloodInitialization(DungeonIntegrityStatus.COMPLETED);
+        } else {
+            dungeon.getDungeonIntegrity().setLobbyBloodInitialization(DungeonIntegrityStatus.FAILED);
+            dungeon.getDungeonIntegrity().changeIntegrity(false, "LobbyBloodInitialization");
         }
     }
 
@@ -173,41 +249,91 @@ public final class DungeonGeneration {
         }
     }
 
+    public ArrayList<DungeonRoom> getSpecificRooms(String identifier) {
+        if (identifier.equalsIgnoreCase("1x1_Square")) {
+            return this.rooms1x1;
+        } else if (identifier.equalsIgnoreCase("2x2_Square")) {
+            return this.rooms2x2;
+        } else if (identifier.equalsIgnoreCase("1x1x1_L")) {
+            return this.rooms1x1x1;
+        } else if (identifier.equalsIgnoreCase("1x2_Rectangle")) {
+            return this.rooms1x2;
+        } else if (identifier.equalsIgnoreCase("1x3_Rectangle")) {
+            return this.rooms1x3;
+        } else if (identifier.equalsIgnoreCase("1x4_Rectangle")) {
+            return this.rooms1x4;
+        }
+        return null;
+    }
+
     public void initializeDungeonRoomInstances(Dungeon dungeon, DungeonGrid grid) {
+        if (!dungeon.getDungeonIntegrity().isIntegrityMaintained()) {
+            return;
+        }
+        dungeon.getDungeonIntegrity().setDungeonRoomInstancing(DungeonIntegrityStatus.RUNNING);
         ArrayList<DungeonRoom> dungeonRooms;
-        DungeonRoom dungeonRoom;
-        String roomType = "BloodRush";
+        ArrayList<DungeonRoomInstance> instances = new ArrayList<>();
+        DungeonRoom dungeonRoom = null;
+        String roomType = "bloodrush";
+        Common.log("Shapes in grid for generating " + grid.getShapes().size());
+        int iterator = 0;
         for (DungeonRoomShape shape : grid.getShapes()) {
             //added null check
+            Common.log("Running for shape number " + iterator);
+            iterator++;
             if (shape != null) {
                 if (shape.getRoomType() == null) {
-                    dungeonRooms = DungeonRoom.findAllByIdentifier(shape.getRoomIdentifier());
-                    Collections.shuffle(dungeonRooms);
-                    dungeonRoom = dungeonRooms.get(0);
-                } else if (shape.getRoomType().equalsIgnoreCase("Lobby")) {
-                    dungeonRoom = DungeonRoom.findByName("Lobby");
-                    roomType = "Lobby";
-                } else if (shape.getRoomType().equalsIgnoreCase("Blood")) {
-                    dungeonRoom = DungeonRoom.findByName("Blood");
-                    roomType = "Blood";
+                    dungeonRooms = getSpecificRooms(shape.getRoomIdentifier());
+                    if (!dungeonRooms.isEmpty()) {
+                        if (dungeonRooms.size() > 1) {
+                            Collections.shuffle(dungeonRooms);
+                        }
+                        dungeonRoom = dungeonRooms.get(0);
+                    }
+                } else if (shape.getRoomType().equalsIgnoreCase("lobby")) {
+                    dungeonRoom = DungeonRoom.findByName("lobby");
+                    roomType = "lobby";
+                } else if (shape.getRoomType().equalsIgnoreCase("blood")) {
+                    dungeonRoom = DungeonRoom.findByName("blood");
+                    roomType = "blood";
                 } else {
-                    dungeonRooms = DungeonRoom.findAllByIdentifier(shape.getRoomIdentifier());
-                    Collections.shuffle(dungeonRooms);
+                    dungeonRooms = getSpecificRooms(shape.getRoomIdentifier());
+                    if (dungeonRooms.size() > 1) {
+                        Collections.shuffle(dungeonRooms);
+                    }
                     dungeonRoom = dungeonRooms.get(0);
                 }
-                DungeonRoomInstance roomInstance = new DungeonRoomInstance(dungeon, dungeonRoom);
-                roomInstance.setRoomType(roomType);
-                roomInstance.setOrientation(shape.getOrientation());
-                roomInstance.setDungeonRoomPoints(shape.getGridConsumption());
-                roomInstance.setShape(shape);
-                dungeon.addDungeonRooms(roomInstance);
-                Common.log("Added room instance");
+                if (dungeonRoom != null) {
+                    int secretCount = 0;
+                    DungeonRoomInstance roomInstance = new DungeonRoomInstance(dungeon, dungeonRoom);
+                    roomInstance.setRoomType(roomType);
+                    roomInstance.setOrientation(shape.getOrientation());
+                    roomInstance.setDungeonRoomPoints(shape.getGridConsumption());
+                    roomInstance.setShape(shape);
+                    roomInstance.setDungeonRoomRegions();
+                    roomInstance.setSecretAmount(secretCount);
+                    roomInstance.setRoomCenter(roomInstance.getShape().getRoomCenterLocation());
+                    DungeonMobSpawnpointInstance.initializeDungeonMobSpawnpoints(roomInstance);
+                    instances.add(roomInstance);
+                    Common.log("Added room instance");
+                } else {
+                    dungeon.getDungeonIntegrity().setDungeonRoomInstancing(DungeonIntegrityStatus.FAILED);
+                    dungeon.getDungeonIntegrity().changeIntegrity(false, "DungeonRoomInstancing");
+                    Common.log("Null room found");
+                }
             }
         }
+        dungeon.setDungeonRooms(instances);
+        dungeon.getDungeonScore().setTotalRooms(instances.size() - 1);
+        dungeon.getDungeonIntegrity().setDungeonRoomInstancing(DungeonIntegrityStatus.COMPLETED);
         dungeonSchematicHandle(dungeon, grid);
     }
 
     public void dungeonSchematicHandle(Dungeon dungeon, DungeonGrid grid) {
+        if (!dungeon.getDungeonIntegrity().isIntegrityMaintained()) {
+            return;
+        }
+        dungeon.getDungeonIntegrity().setSchematicPasting(DungeonIntegrityStatus.RUNNING);
 
         List<DungeonRoomInstance> rooms = dungeon.getDungeonRooms();
         double centerOffset = 15.0;
@@ -220,26 +346,35 @@ public final class DungeonGeneration {
             DungeonRoomShape shape;
             Location centerLocation;
             int schemCounter;
+            int floorHeightDifference;
 
             @Override
             public void run() {
+                if (iterator > 100) {
+                    dungeon.getDungeonIntegrity().setSchematicPasting(DungeonIntegrityStatus.FAILED);
+                    dungeon.getDungeonIntegrity().changeIntegrity(false, "SchematicPasting");
+                    this.cancel();
+                }
                 if (iterator < rooms.size()) {
                     schemCounter = 1;
                     currentRoom = rooms.get(iterator);
                     shape = currentRoom.getShape();
                     rotation = shape.getOrientation();
+                    floorHeightDifference = currentRoom.getFloorDifference();
                     for (DungeonRoomPoint point : shape.getGridConsumption()) {
                         centerLocation = point.getCenterLocation();
-                        Location loc = new Location(centerLocation.getWorld(), centerLocation.getX() - centerOffset, centerLocation.getY(), centerLocation.getZ() - centerOffset);
-                        SchematicManager.paste(loc, locateSchematic(currentRoom.getDungeonRoom().getName() + schemCounter), rotation);
+                        Location loc = new Location(centerLocation.getWorld(), centerLocation.getX() - centerOffset, centerLocation.getY() - floorHeightDifference, centerLocation.getZ() - centerOffset);
+                        SchematicManager.paste(loc, locateSchematic(currentRoom.getDungeonRoom(), currentRoom.getDungeonRoom().getName().toLowerCase() + schemCounter), rotation);
                         schemCounter++;
                     }
-                    currentRoom.initializePossibleDoors(dungeon, currentRoom, shape.getGridConsumption());
+                    //DungeonMob.initializeStarredMobs(dungeon, currentRoom);
+                    DungeonMob.initializeCompletionMobs(dungeon, currentRoom);
                 } else {
                     Common.log("Finished pasting dungeon " + dungeon.getName());
                     DungeonPathfinding pathfinding = new DungeonPathfinding(dungeon, grid);
+                    dungeon.setDungeonPathfinding(pathfinding);
                     pathfinding.initializePathfinding(dungeon, grid);
-                    cancel();
+                    this.cancel();
                 }
                 iterator++;
             }
@@ -280,7 +415,6 @@ public final class DungeonGeneration {
                     if (!focusedPoint.isAlreadyUsed()) {
                         DungeonRoomShape shape = shapeGenerator(dungeon, focusedPoint, generationRounds, false);
                         if (shape != null) {
-                            //Common.log("Added room " + dungeonRoom.getName() + " with a shape of " + shape.getRoomIdentifier());
                             pasteAndConnect(dungeon, grid, shape.getGridConsumption(), shape);
                         } else {
                             Common.log("Shape null found");
@@ -309,7 +443,10 @@ public final class DungeonGeneration {
 
     }
 
-    public static void pasteAndConnect(Dungeon dungeon, DungeonGrid grid, ArrayList<DungeonRoomPoint> gridConsumption, DungeonRoomShape shape) {
+    public void pasteAndConnect(Dungeon dungeon, DungeonGrid grid, ArrayList<DungeonRoomPoint> gridConsumption, DungeonRoomShape shape) {
+        if (!dungeon.getDungeonIntegrity().isIntegrityMaintained()) {
+            return;
+        }
 
         //DungeonRoomInstance dungeonRoomInstance = new DungeonRoomInstance(dungeon, dungeonRoom);
         //dungeonRoomInstance.setDungeonRoomPoints(gridConsumption);
@@ -319,10 +456,9 @@ public final class DungeonGeneration {
         Location location;
         Location previousPoint = null;
         Location centerLocation;
-        boolean isFirstRound = true;
         int rotation = shape.getOrientation();
         int schemCounter = 1;
-        ArrayList<DungeonRoom> rooms = DungeonRoom.findAllByIdentifier(shape.getRoomIdentifier());
+        ArrayList<DungeonRoom> rooms = getSpecificRooms(shape.getRoomIdentifier());
         Random rand = new Random();
         DungeonRoom dungeonRoom;
         //if (rooms.size() > 1) {
@@ -334,43 +470,11 @@ public final class DungeonGeneration {
         for (DungeonRoomPoint point : gridConsumption) {
             centerLocation = point.getCenterLocation();
             Location loc = new Location(centerLocation.getWorld(), centerLocation.getX() - 15.0, centerLocation.getY(), centerLocation.getZ() - 15.0);
-            SchematicManager.paste(loc, locateSchematic(dungeonRoom.getName() + schemCounter), rotation);
+            SchematicManager.paste(loc, locateSchematic(dungeonRoom, dungeonRoom.getName().toLowerCase() + schemCounter), rotation);
             schemCounter++;
             grid.addDungeonRoomShape(shape);
-            /*
-            if (!isFirstRound) {
-                if (!shape.getRoomIdentifier().equals("1x1_Square")) {
-                    if (!(centerLocation.getX() == previousPoint.getX() && centerLocation.getZ() == previousPoint.getZ())) {
-                        if ((int) centerLocation.getX() == (int) previousPoint.getX()) {
-                            location = findMidPoint(centerLocation, previousPoint);
-                            location.getBlock().setType(Material.SEA_LANTERN);
-                            Common.log("Connector origins: " + previousPoint.getX() + "," + centerLocation.getX());
-                            Common.log("Connector origins: " + previousPoint.getZ() + "," + centerLocation.getZ());
-                            Common.log("Pasting stone connector at " + location.getX() + " " + location.getY() + " " + location.getZ());
-                        } else if ((int) centerLocation.getZ() == (int) previousPoint.getZ()) {
-                            location = findMidPoint(centerLocation, previousPoint);
-                            location.getBlock().setType(Material.SEA_LANTERN);
-                            Common.log("Connector origins: " + previousPoint.getX() + "," + centerLocation.getX());
-                            Common.log("Connector origins: " + previousPoint.getZ() + "," + centerLocation.getZ());
-                            Common.log("Pasting stone connector at " + location.getX() + " " + location.getY() + " " + location.getZ());
-                        } else {
-                            Common.log("InfiniteError >> Centerpoint location not found due to neither x or z being the same as previousPoint");
-                        }
-                    } else {
-                        Common.log("Skipping connection process due to locations already equal");
-                    }
-                } else {
-                    Common.log("Skipping connection process due to shape identifier " + shape.getRoomIdentifier());
-                }
-            } else {
-                Common.log("Skipping connection process due to first round");
-            }
-            */
-            //previousPoint = centerLocation;
-            //isFirstRound = false;
-
         }
-        //dungeon.addDungeonRooms(dungeonRoomInstance);
+
     }
 
     public static Location findMidPoint(Location location1, Location location2) {
@@ -384,7 +488,6 @@ public final class DungeonGeneration {
     }
 
     public DungeonRoomShape shapeGenerator(Dungeon dungeon, DungeonRoomPoint point, int generationRound, boolean forcedOne) {
-
         ArrayList<String> notUsable = new ArrayList<>();
         Location pointCenter = point.getCenterLocation();
         String choice = "Failed";
@@ -419,14 +522,33 @@ public final class DungeonGeneration {
         shape.setOrientation(orientation);
         shape.setRoomIdentifier(choice);
         shape.setGridConsumption(DungeonRoomPoint.getPointsFromLocations(dungeon, DungeonRoomShapeOrientation.calculateLocationsNeededOrientation(choice, pointCenter, orientation)));
+        shape.setRoomCenterLocation(pointCenter);
         return shape;
+    }
+
+    private int getMaxCount(Dungeon dungeon, String choice) {
+        switch (choice) {
+            case "2x2_Square":
+                return dungeon.max22Square;
+            case "1x1x1_L":
+                return dungeon.max111L;
+            case "1x2_Rectangle":
+                return dungeon.max12Rectangle;
+            case "1x3_Rectangle":
+                return dungeon.max13Rectangle;
+            case "1x4_Rectangle":
+                return dungeon.max14Rectangle;
+            default:
+                return 0;
+        }
     }
 
     public int checkShapeValid(Dungeon dungeon, String choice, Location position, int generationRound) {
         int orientation = 4;
         switch (choice) {
             case "1x1_Square":
-                orientation = 0;
+                Random rand = new Random();
+                orientation = rand.nextInt(4);
                 if (this.current11Square < dungeon.max11Square) {
                     this.current11Square++;
                     return orientation;
@@ -513,7 +635,6 @@ public final class DungeonGeneration {
         ArrayList<Integer> orientations = new ArrayList<>(Arrays.asList(0,1,2,3));
         Collections.shuffle(orientations);
         for (Integer orientation : orientations) {
-            //Common.log("Checking orientaton " + orientation);
             if (specificOrientationWorks(dungeon, shape, startingPosition, orientation)) {
                 return orientation;
             }
@@ -571,45 +692,14 @@ public final class DungeonGeneration {
         return "Failed";
     }
 
-    public void additiveRoomCurrentValues(String shape) {
-        switch (shape) {
-            case "1x1_Square":
-                this.current11Square++;
-            case "2x2_Square":
-                this.current22Square++;
-            case "1x1x1_L":
-                this.current111L++;
-            case "1x2_Rectangle":
-                this.current12Rectangle++;
-            case "1x3_Rectangle":
-                this.current13Rectangle++;
-            case "1x4_Rectangle":
-                this.current14Rectangle++;
-        }
-    }
-
     public boolean checkMinimumSchematicsExist() {
         return true;
     }
 
-    public static File locateSchematic(String name) {
-        File schematic = FileUtil.getFile("DungeonStorage/Schematics/" + name + ".schematic");
+    public static File locateSchematic(DungeonRoom dungeonRoom, String name) {
+        File schematic = FileUtil.getFile("DungeonStorage/Schematics/" + folderClassification(dungeonRoom.getRoomIdentifier()) + "/" + name.toLowerCase() + ".schematic");
         checkBoolean(schematic.exists());
         return schematic;
-    }
-
-    public static Region createDungeonRegion(Dungeon dungeon) {
-        Location lobby = DungeonLastInstanceStorage.findNextInstanceLocation();
-        dungeon.setLobbyLocation(lobby);
-        double maxDungeonHeight = 150;
-        double roomRadius = 16;
-        Location proceduralOne = lobby.clone().add(lobby.getX() - (69 + roomRadius), lobby.getY() - 1, lobby.getZ() + roomRadius);
-        Location proceduralTwo = lobby.clone().add(lobby.getX() + (67 + roomRadius), lobby.getY() + maxDungeonHeight, lobby.getZ() - (136 + roomRadius));
-        return new Region(dungeon.getName(), proceduralOne, proceduralTwo);
-    }
-
-    public static void createDungeonRoomRegion() {
-
     }
 
     public static ArrayList<Location> generatePossibleRoomCenterLocations(Location startingCenter, int floor) {
@@ -619,14 +709,15 @@ public final class DungeonGeneration {
         Location lastLocation = startingCenter;
         int baseRoomDiameter = 31;
         int gapSize = 3;
-        int dimensions = 6;
-        for (int i = 0; i < dimensions; i++) {
-            for (int b = 0; b <= (dimensions - 2); b++) {
+        int dimensionsH = GeneralUtils.findRowsForFloor(floor, "h");
+        int dimensionsV = GeneralUtils.findRowsForFloor(floor, "z");
+        for (int i = 0; i < dimensionsV; i++) {
+            for (int b = 0; b <= (dimensionsH - 2); b++) {
                 lastLocation = lastLocation.clone().add(baseRoomDiameter + gapSize, 0, 0);
                 allCenters.add(lastLocation);
                 Common.log("Added possible location: " + lastLocation.getX() + " " + lastLocation.getZ());
             }
-            if (i < (dimensions - 1)) {
+            if (i < (dimensionsV - 1)) {
                 lastLocation = startingCenter.clone().add(0, 0, (baseRoomDiameter + gapSize) * (i + 1));
                 allCenters.add(lastLocation);
                 Common.log("Added possible location: " + lastLocation.getX() + " " + lastLocation.getZ());
@@ -636,20 +727,22 @@ public final class DungeonGeneration {
         return allCenters;
     }
 
-    public static int findRowsForFloor(int floor) {
-        int temp;
-        if (floor == 7) {
-            temp = 6;
-        } else if (floor >= 5) {
-            temp = 5;
-        } else if (floor >= 3) {
-            temp = 3;
-        } else if (floor > 0) {
-            temp = 2;
-        } else {
-            temp = 1;
+    public static String folderClassification(String roomSize) {
+        switch (roomSize) {
+            case "1x1_Square":
+                return "1x1";
+            case "2x2_Square":
+                return "2x2";
+            case "1x1x1_L":
+                return "1x1x1";
+            case "1x2_Rectangle":
+                return "1x2";
+            case "1x3_Rectangle":
+                return "1x3";
+            case "1x4_Rectangle":
+                return "1x4";
         }
-        return temp * 34;
+        return null;
     }
 
 }

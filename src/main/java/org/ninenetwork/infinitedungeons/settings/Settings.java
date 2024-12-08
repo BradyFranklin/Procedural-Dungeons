@@ -4,6 +4,9 @@ import org.mineacademy.fo.settings.Lang;
 import org.mineacademy.fo.settings.SimpleSettings;
 import org.mineacademy.fo.settings.YamlStaticConfig;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * A sample settings class, utilizing {@link YamlStaticConfig} with prebuilt settings.yml handler
  * with a bunch of preconfigured keys, see resources/settings.yml
@@ -16,32 +19,86 @@ import org.mineacademy.fo.settings.YamlStaticConfig;
 @SuppressWarnings("unused")
 public final class Settings extends SimpleSettings {
 
-    /**
-     * @see org.mineacademy.fo.settings.SimpleSettings#getConfigVersion()
-     */
     @Override
     protected int getConfigVersion() {
         return 1;
     }
 
-    /**
-     * Place the sections where user can create new "key: value" pairs
-     * here so that they are not removed while adding comments.
-     *
-     * Example use in ChatControl: user can add new channels in "Channels.List"
-     * section so we place "Channels.List" here.
-     *
-     * @return the ignored sections
-     */
-	/*@Override
-	protected List<String> getUncommentedSections() {
-		return Arrays.asList(
-				"Example.Uncommented_Section");
-	}*/
+    @Override
+    protected boolean saveComments() {
+        return false;
+    }
 
-    /**
-     * A sample settings section
-     */
+    public static class PluginServerSettings {
+
+        public static String DUNGEON_WORLD_NAME;
+        public static Boolean DEBUG_MODE;
+
+        /*
+         * Automatically called method when we load settings.yml to load values in this subclass
+         */
+        private static void init() {
+            setPathPrefix("Dungeon_Server-Wide_Settings");
+
+            DUNGEON_WORLD_NAME = getString("Dungeon_World");
+            DEBUG_MODE = getBoolean("Debug_Mode");
+        }
+    }
+
+    public static class Items {
+
+        public static String DAMAGE_STAT;
+        public static String STRENGTH_STAT;
+        public static String CRIT_DAMAGE_STAT;
+        public static String CRIT_CHANCE_STAT;
+        public static String HEALTH_STAT;
+        public static String DEFENSE_STAT;
+        public static String TRUE_DEFENSE_STAT;
+        public static String INTELLIGENCE_STAT;
+        public static String HEALTH_REGEN_STAT;
+        public static String FEROCITY_STAT;
+        public static String MANA_COST_STAT;
+        public static String SPEED_STAT;
+        public static String BONUS_ATTACK_STAT;
+        public static String ABILITY_DAMAGE_STAT;
+        public static String MAGIC_FIND_STAT;
+        public static String VITALITY_STAT;
+
+        public static String HYPERIONNAME;
+        public static List<String> HYPERIONLORE;
+        public static String STORMHELMETNAME;
+        public static List<String> STORMHELMETLORE;
+
+        /*
+         * Automatically called method when we load settings.yml to load values in this subclass
+         */
+        private static void init() {
+            setPathPrefix("Dungeon_Items");
+
+            DAMAGE_STAT = getString("Damage_Stat_Format");
+            STRENGTH_STAT = getString("Strength_Stat_Format");
+            CRIT_DAMAGE_STAT = getString("Crit_Damage_Stat_Format");
+            HEALTH_STAT = getString("Health_Stat_Format");
+            DEFENSE_STAT = getString("Defense_Stat_Format");
+            TRUE_DEFENSE_STAT = getString("True_Defense_Stat_Format");
+            INTELLIGENCE_STAT = getString("Intelligence_Stat_Format");
+            CRIT_CHANCE_STAT = getString("Crit_Chance_Stat_Format");
+            HEALTH_REGEN_STAT = getString("Health_Regen_Stat_Format");
+            FEROCITY_STAT = getString("Ferocity_Stat_Format");
+            MANA_COST_STAT = getString("Mana_Cost_Stat_Format");
+            SPEED_STAT = getString("Speed_Stat_Format");
+            BONUS_ATTACK_STAT = getString("Bonus_Attack_Stat_Format");
+            ABILITY_DAMAGE_STAT = getString("Ability_Damage_Stat_Format");
+            MAGIC_FIND_STAT = getString("Magic_Find_Stat_Format");
+            VITALITY_STAT = getString("Vitality_Stat_Format");
+
+            HYPERIONNAME = getString("Hyperion_Name");
+            HYPERIONLORE = getStringList("Hyperion_Lore");
+            STORMHELMETNAME = getString("Storm_Helmet_Name");
+            STORMHELMETLORE = getStringList("Storm_Helmet_Lore");
+        }
+    }
+
     public static class AutoMode {
 
         public static Boolean ENABLED;

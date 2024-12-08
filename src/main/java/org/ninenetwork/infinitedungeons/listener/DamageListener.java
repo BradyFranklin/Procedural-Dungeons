@@ -1,74 +1,70 @@
 package org.ninenetwork.infinitedungeons.listener;
 
-import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
+import net.citizensnpcs.api.CitizensAPI;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.*;
 import org.mineacademy.fo.Common;
-import org.mineacademy.fo.ReflectionUtil;
-import org.mineacademy.fo.remain.CompMetadata;
-import org.ninenetwork.infinitedungeons.NMSSpecific.HitHologram;
-import org.ninenetwork.infinitedungeons.PlayerCache;
-import org.ninenetwork.infinitedungeons.dungeon.Dungeon;
+import org.ninenetwork.infinitedungeons.mob.DungeonMobManager;
 import org.ninenetwork.infinitedungeons.mob.DungeonMobRegistry;
-import org.ninenetwork.infinitedungeons.playerstats.health.PlayerHealthHandler;
+import org.ninenetwork.infinitedungeons.playerstats.damage.DamageType;
+import org.ninenetwork.infinitedungeons.playerstats.damage.MobDamageHandler;
+import org.ninenetwork.infinitedungeons.playerstats.damage.PlayerDamageHandler;
 import org.ninenetwork.infinitedungeons.settings.Settings;
-import org.ninenetwork.infinitedungeons.util.DungeonMobUtil;
 
-import java.awt.*;
-
-public class MobListeners implements Listener {
+public class DamageListener implements Listener {
 
     @EventHandler
-    public void onMobDamage(EntityDamageByEntityEvent event) {
+    public void onDamage(EntityDamageByEntityEvent event) {
         Entity entity = event.getEntity();
+
         if (event.getEntity().getWorld().getName().equals(Settings.PluginServerSettings.DUNGEON_WORLD_NAME)) {
             if (entity instanceof ArmorStand) {
-                event.setCancelled(true);
+                //event.setCancelled(true);
+            }
+            if (CitizensAPI.getNPCRegistry().isNPC(event.getEntity()) || CitizensAPI.getNPCRegistry().isNPC(event.getDamager())) {
+                Common.log("Cancelled normal damage event for npc");
+                //event.setCancelled(true);
             }
 
-            //EntityDamaged//
-            if (event.getDamager() instanceof Player && entity instanceof LivingEntity && entity.getCustomName() != null) {
-                Player player = (Player) event.getDamager();
-                PlayerCache cache = PlayerCache.from(player);
-                LivingEntity mob = (LivingEntity) entity;
-                double damageAmount = 5.0;
-                double health = mob.getHealth();
-            /*
-            if (CompMetadata.hasMetadata(entity, "WildBarbarian")) {
-                mob.setCustomName(Common.colorize(DungeonMobUtil.updateMobNametag(mob, damageAmount, health, "Wild Barbarian", "#F1FC01", "#FDBA40")));
-            } else if (CompMetadata.hasMetadata(entity, "AncientArcher")) {
-                mob.setCustomName(Common.colorize(DungeonMobUtil.updateMobNametag(mob, damageAmount, health, "Ancient Archer", "#F9D1F9", "#D800D5")));
-            } else if (CompMetadata.hasMetadata(entity, "NeolithicNecromancer")) {
-                mob.setCustomName(Common.colorize(DungeonMobUtil.updateMobNametag(mob, damageAmount, health, "Neo Necro", "#A38C8C", "#3D3D3D")));
-            } else if (CompMetadata.hasMetadata(entity, "FossilizedTarantula")) {
-                mob.setCustomName(Common.colorize(DungeonMobUtil.updateMobNametag(mob, damageAmount, health, "Fossil Tara", "#A38C8C", "#3D3D3D")));
-            }
-            */
-
-                if (entity.getCustomName().contains("WildBarbarian")) {
-                    mob.setCustomName(Common.colorize(DungeonMobUtil.updateMobNametag(mob, damageAmount, health, "Wild Barbarian", "#F1FC01", "#FDBA40")));
-                } else if (entity.getCustomName().contains("AncientArcher")) {
-                    mob.setCustomName(Common.colorize(DungeonMobUtil.updateMobNametag(mob, damageAmount, health, "Ancient Archer", "#F9D1F9", "#D800D5")));
-                } else if (entity.getCustomName().contains("NeolithicNecromancer")) {
-                    mob.setCustomName(Common.colorize(DungeonMobUtil.updateMobNametag(mob, damageAmount, health, "Neo Necro", "#A38C8C", "#3D3D3D")));
-                } else if (entity.getCustomName().contains("FossilizedTarantula")) {
-                    mob.setCustomName(Common.colorize(DungeonMobUtil.updateMobNametag(mob, damageAmount, health, "Fossil Tara", "#A38C8C", "#3D3D3D")));
-                }
-                event.setDamage(damageAmount);
-                HitHologram.createHitHologram(player, mob, damageAmount);
-                if (cache.getCurrentDungeon() != null) {
-                    Dungeon dungeon = cache.getCurrentDungeon();
-                    if (dungeon.getMobTracking().containsKey(entity)) {
-                        Common.tell(player, "Entity found in a room of type " + dungeon.getMobTracking().get(entity).getRoomIdentifier());
+            if (event.getDamager() instanceof LivingEntity && event.getEntity() instanceof LivingEntity) {
+                if (DungeonMobManager.getInstance().checkIsDungeonMob((LivingEntity) event.getEntity())) {
+                    if (event.getDamager() instanceof Player) {
+                        PlayerDamageHandler.handleNormalDamage((Player) event.getDamager(), (LivingEntity) event.getEntity(), DamageType.MELEE);
                     }
+                    event.setCancelled(true);
+                } else if (DungeonMobManager.getInstance().checkIsDungeonMob((LivingEntity) event.getDamager())) {
+                    if (event.getEntity() instanceof Player) {
+                        MobDamageHandler.handleNormalDamage((Player) event.getEntity(), (LivingEntity) event.getDamager(), DamageType.MELEE);
+                    }
+                    event.setCancelled(true);
+                } else if (!(event.getDamager() instanceof Player) && !(event.getEntity() instanceof Player)) {
+                    event.setCancelled(true);
                 }
-                //PlayerDamaged//
+            }
+
+            /*
+            if (event.getDamager() instanceof Player && (entity instanceof LivingEntity && !(entity instanceof org.bukkit.entity.NPC)) && entity.getCustomName() != null) {
+                if (event.getEntity() instanceof NPC) {
+                    Common.log("Regular damage event for player hitting an npc");
+                } else {
+                    PlayerDamageHandler.handleNormalDamage((Player) event.getDamager(), (LivingEntity) event.getEntity(), DamageType.MELEE);
+                    Common.tell(event.getDamager(), "Reached damage handle");
+                }
+            } else if ((event.getDamager() instanceof LivingEntity || event.getDamager() instanceof NPC) && event.getEntity() instanceof Player) {
+                if (event.getDamager() instanceof NPC) {
+                    Common.log("Regular damage event ran for npc hitting player");
+                } else {
+                    MobDamageHandler.handleNormalDamage((Player) event.getEntity(),(LivingEntity) event.getDamager(),DamageType.MELEE);
+                }
+                //add param's here and finish
+            }
+            if (!(event.getDamager() instanceof NPC) && !(event.getEntity() instanceof NPC)) {
+                //event.setCancelled(true);
+            }
+
+                //PlayerDamaged// havent handled player beingg damaged yet new way
             } else if (event.getDamager() instanceof LivingEntity && event.getEntity() instanceof Player) {
                 Player player = (Player) event.getEntity();
                 LivingEntity mob = (LivingEntity) event.getDamager();
@@ -81,13 +77,42 @@ public class MobListeners implements Listener {
                     }
                 }
             }
+            */
+        }
+    }
+
+    @EventHandler
+    public void onProjectileHit(ProjectileHitEvent event) {
+        if (event.getEntity().getWorld().getName().equals(Settings.PluginServerSettings.DUNGEON_WORLD_NAME)) {
+            if (event.getHitEntity() instanceof Player) {
+                if (event.getEntity() instanceof Arrow) {
+                    Arrow arrow = (Arrow) event.getEntity();
+                    if (DungeonMobManager.getInstance().checkIsDungeonMob((LivingEntity) arrow.getShooter())) {
+                        MobDamageHandler.handleNormalDamage((Player) event.getHitEntity(), (LivingEntity) arrow.getShooter(), DamageType.PROJECTILE);
+                    }
+                    event.setCancelled(true);
+                }
+            } else if (!(event.getHitEntity() instanceof Player) && !(event.getEntity().getShooter() instanceof Player)) {
+                event.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onFireTick(EntityCombustByBlockEvent event) {
+        if (event.getEntity().getWorld().getName().equals(Settings.PluginServerSettings.DUNGEON_WORLD_NAME)) {
+            if (!(event.getEntity() instanceof Player)) {
+                event.setCancelled(true);
+            }
         }
     }
 
     @EventHandler
     public void onDamage(EntityDamageEvent event) {
         if (event.getEntity().getWorld().getName().equalsIgnoreCase(Settings.PluginServerSettings.DUNGEON_WORLD_NAME)) {
-            if (event.getCause() == EntityDamageEvent.DamageCause.FALL) {
+            EntityDamageEvent.DamageCause damageCause = event.getCause();
+            if (damageCause == EntityDamageEvent.DamageCause.FALL || damageCause == EntityDamageEvent.DamageCause.CRAMMING || damageCause == EntityDamageEvent.DamageCause.FIRE ||
+            damageCause == EntityDamageEvent.DamageCause.FIRE_TICK || damageCause == EntityDamageEvent.DamageCause.LAVA || damageCause == EntityDamageEvent.DamageCause.SUFFOCATION) {
                 event.setCancelled(true);
             }
         }
@@ -96,7 +121,7 @@ public class MobListeners implements Listener {
     @EventHandler
     public void onDeath(EntityDeathEvent event) {
         LivingEntity entity = event.getEntity();
-        if (!(entity instanceof Player) && entity.getWorld().getName().equalsIgnoreCase("Dungeon")) {
+        if (!(entity instanceof Player) && entity.getWorld().getName().equals(Settings.PluginServerSettings.DUNGEON_WORLD_NAME)) {
             boolean work = DungeonMobRegistry.getInstance().removeMob(entity);
             if (event.getEntity().getKiller() != null) {
                 Common.tell(event.getEntity().getKiller(), "Removal of mob was " + work);

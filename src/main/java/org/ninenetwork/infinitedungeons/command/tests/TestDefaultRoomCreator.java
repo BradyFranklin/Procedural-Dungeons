@@ -3,10 +3,8 @@ package org.ninenetwork.infinitedungeons.command.tests;
 import org.bukkit.entity.Player;
 import org.mineacademy.fo.FileUtil;
 import org.mineacademy.fo.command.SimpleCommand;
-import org.mineacademy.fo.region.Region;
 import org.ninenetwork.infinitedungeons.PlayerCache;
 import org.ninenetwork.infinitedungeons.dungeon.*;
-import org.ninenetwork.infinitedungeons.map.SchematicManager;
 
 import java.io.File;
 import java.util.ArrayList;

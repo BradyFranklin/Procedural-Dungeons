@@ -34,6 +34,69 @@ Auto_Mode:
   Enabled: false
   Return_Back_Server: ""
 
+Dungeon_Server-Wide_Settings:
+  Dungeon_World: "Dungeon"
+  Debug_Mode: false
+
+Dungeon_Items:
+  Damage_Stat_Format: "&7Damage: &c+%damage%"
+  Strength_Stat_Format: "&7Strength: &c+%strength%"
+  Crit_Damage_Stat_Format: "&7Crit Damage: &c+%critdamage%"
+  Health_Stat_Format: "&7Health &a+%health%"
+  Defense_Stat_Format: "&7Defense: &a+%defense%"
+  True_Defense_Stat_Format: "&7True Defense: &a+%truedefense%"
+  Intelligence_Stat_Format: "&7Intelligence: &a+%intelligence%"
+  Crit_Chance_Stat_Format: "&7Crit Chance: &c+%critchance"
+  Health_Regen_Stat_Format: "&7Health Regen: &a+%healthregen%"
+  Ferocity_Stat_Format: "&7Ferocity: &a+%ferocity%"
+  Speed_Stat_Format: "&7Speed: &a+%speed%"
+  Bonus_Attack_Stat_Format: "&7Bonus Attack Speed: &c+%bonusattack%"
+  Mana_Cost_Stat_Format: "&8Mana Cost: &3%manacost%"
+  Ability_Damage_Stat_Format: "&7Ability Damage: &c+%abilitydamage%"
+  Magic_Find_Stat_Format: "&7Magic Find: &a+%magicfind%"
+  Vitality_Stat_Format: "&7Vitality: &c+%vitality%"
+
+  Hyperion_Name: "&dHyperion &c✪✪✪✪&6✪"
+  Hyperion_Lore:
+    - "&7Damage: &c%damage%"
+    - "&7Strength: &c%strength%"
+    - " "
+    - "&7Intelligence: &a%intelligence%"
+    - "&7Ferocity: &a%ferocity%"
+    - " "
+    - "%enchants%"
+    - " "
+    - "&7Deals &c+50% &7damage to"
+    - "&7Withers. Grants &c+1 Damage"
+    - "&7and &a+2 &bIntelligence"
+    - "&7per &cCatacombs &7level"
+    - " "
+    - "&aScroll Abilities:"
+    - "%scrolls%"
+    - "&8Mana Cost: &3%manacost%"
+    - " "
+    - "&d&lMYTHIC DUNGEON SWORD"
+  Storm_Helmet_Name: "&bStorm Helmet &c✪✪✪✪&6✪"
+  Storm_Helmet_Lore:
+    - "&7Damage: &c%damage%"
+    - "&7Strength: &c%strength%"
+    - " "
+    - "&7Intelligence: &a%intelligence%"
+    - "&7Ferocity: &a%ferocity%"
+    - " "
+    - "%enchants%"
+    - " "
+    - "&7Deals &c+50% &7damage to"
+    - "&7Withers. Grants &c+1 Damage"
+    - "&7and &a+2 &bIntelligence"
+    - "&7per &cCatacombs &7level"
+    - " "
+    - "&aScroll Abilities:"
+    - "%scrolls%"
+    - "&8Mana Cost: &3%manacost%"
+    - " "
+    - "&d&lMYTHIC DUNGEON SWORD"
+
 # -------------------------------------------------------------------------------------------------
 # The formats used in the {timestamp} and {location} variables. For help with timestamp, see:
 # https://docs.oracle.com/javase/8/docs/api/java/text/SimpleDateFormat.html

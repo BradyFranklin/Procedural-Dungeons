@@ -13,8 +13,7 @@ import org.mineacademy.fo.region.Region;
 import org.mineacademy.fo.remain.CompMaterial;
 import org.mineacademy.fo.remain.Remain;
 import org.ninenetwork.infinitedungeons.PlayerCache;
-import org.ninenetwork.infinitedungeons.dungeon.DungeonRoom;
-import org.ninenetwork.infinitedungeons.map.SchematicManager;
+import org.ninenetwork.infinitedungeons.world.SchematicManager;
 
 import java.io.File;
 import java.util.HashMap;
@@ -66,7 +65,7 @@ public final class SetBlockCommand extends SimpleCommand {
         if ("save".equals(param) || "paste".equals(param) || "pastehere".equals(param)) {
             checkBoolean(HookManager.isWorldEditLoaded(), "Loading or saving schematic requires WorldEdit.");
             checkBoolean(MinecraftVersion.atLeast(MinecraftVersion.V.v1_13), "Loading or saving schematic requires Minecraft 1.13 or greater.");
-            String path = "DungeonStorage/Schematics/" + param2 + ".schematic";
+            String path = "DungeonStorage/Schematics/" + param2.toLowerCase() + ".schematic";
             File schematic = FileUtil.getOrMakeFile(path);
 
             if ("save".equals(param)) {

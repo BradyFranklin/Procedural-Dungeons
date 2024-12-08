@@ -12,8 +12,6 @@ public enum DungeonRoomType {
     LOBBY("Lobby", DungeonRoomLobby.class),
     BLOODRUSH("BloodRush", DungeonRoomBloodRush.class),
     PUZZLE("Puzzle", DungeonRoomPuzzle.class),
-    FAIRY("Fairy", DungeonRoomFairy.class),
-    NONBLOODRUSH("Non_Blood_Rush", DungeonRoomNonBloodRush.class),
     BLOOD("Blood", DungeonRoomBlood.class);
 
     @Getter

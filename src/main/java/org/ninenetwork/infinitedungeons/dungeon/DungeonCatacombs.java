@@ -7,11 +7,11 @@ import javax.annotation.Nullable;
 
 public class DungeonCatacombs extends Dungeon {
 
-    DungeonCatacombs(String name) {
+    protected DungeonCatacombs(String name) {
         super(name);
     }
 
-    DungeonCatacombs(String name, @Nullable DungeonType type) {
+    protected DungeonCatacombs(String name, @Nullable DungeonType type) {
         super(name, type);
     }
 

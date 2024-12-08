@@ -1,4 +1,4 @@
-package org.ninenetwork.infinitedungeons.mob.types;
+package org.ninenetwork.infinitedungeons.mob.types.nms;
 
 import io.lumine.mythic.core.mobs.ai.Pathfinder;
 import io.lumine.mythic.core.mobs.ai.PathfindingGoal;
@@ -47,7 +47,7 @@ public class LastAncientArcher extends Skeleton {
         this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true));
 
         final Entity bukkitEntity = getBukkitEntity();
-        bukkitEntity.setCustomName(Common.colorize(DungeonMobUtil.getEntityDefaultNametag(bukkitEntity, "Ancient Archer", "#F9D1F9", "#D800D5")));
+        //bukkitEntity.setCustomName(Common.colorize(DungeonMobUtil.getEntityDefaultNametag(bukkitEntity, "Ancient Archer", "#F9D1F9", "#D800D5", 100)));
         bukkitEntity.setCustomNameVisible(true);
 
         DungeonMobUtil.createDyedArmorPieces(bukkitEntity, Color.fromRGB(255, 102, 252));

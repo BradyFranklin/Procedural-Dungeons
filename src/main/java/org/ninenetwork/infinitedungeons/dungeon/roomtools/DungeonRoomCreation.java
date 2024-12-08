@@ -1,2 +1,212 @@
-package org.ninenetwork.infinitedungeons.dungeon.roomtools;public class DungeonRoomCreation {
+package org.ninenetwork.infinitedungeons.dungeon.roomtools;
+
+import org.bukkit.Location;
+import org.bukkit.entity.Player;
+import org.mineacademy.fo.Common;
+import org.mineacademy.fo.FileUtil;
+import org.mineacademy.fo.MinecraftVersion;
+import org.mineacademy.fo.Valid;
+import org.mineacademy.fo.model.HookManager;
+import org.mineacademy.fo.region.Region;
+import org.ninenetwork.infinitedungeons.PlayerCache;
+import org.ninenetwork.infinitedungeons.dungeon.DungeonRoom;
+import org.ninenetwork.infinitedungeons.dungeon.DungeonRoomType;
+import org.ninenetwork.infinitedungeons.world.SchematicManager;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+
+public class DungeonRoomCreation {
+
+    public static DungeonRoom createDungeonRoom(Player player, String name, DungeonRoomType type, String sizeIdentifier) {
+        DungeonRoom dungeonRoom = DungeonRoom.createDungeonRoom(name, type);
+        dungeonRoom.setRoomIdentifier(sizeIdentifier);
+        return dungeonRoom;
+        //Common.tell(player, "Successfully created dungeon room " + dungeonRoom.getName() + " of type " + dungeonRoom.getRoomIdentifier());
+    }
+
+    public static void setDungeonRoomSchematic(Player player, DungeonRoom dungeonRoom) {
+        Valid.checkBoolean(HookManager.isWorldEditLoaded(), "Loading or saving schematic requires WorldEdit.");
+        Valid.checkBoolean(MinecraftVersion.atLeast(MinecraftVersion.V.v1_13), "Loading or saving schematic requires Minecraft 1.13 or greater.");
+
+        PlayerCache data = PlayerCache.from(player);
+        Region region = data.getRegion();
+        Valid.checkBoolean(region.isWhole(), "Use /tools to set both primary/secondary region points.");
+
+        dungeonRoom.setRoomCenter(region.getPrimary().clone().add(15, 0, 15));
+        dungeonRoom.setRoomRegion(region);
+
+        String path1 = "DungeonStorage/Schematics/%r" + (dungeonRoom.getName().toLowerCase() + "1" + ".schematic");
+        String path2 = "DungeonStorage/Schematics/%r" + (dungeonRoom.getName().toLowerCase() + "2" + ".schematic");
+        String path3 = "DungeonStorage/Schematics/%r" + (dungeonRoom.getName().toLowerCase() + "3" + ".schematic");
+        String path4 = "DungeonStorage/Schematics/%r" + (dungeonRoom.getName().toLowerCase() + "4" + ".schematic");
+        Location firstLocationChange;
+        Location secondLocationChange;
+        Location thirdLocationChange;
+        Location fourthLocationChange;
+        Location fifthLocationChange;
+        Location sixthLocationChange;
+
+        String sizeIdentifier = dungeonRoom.getRoomIdentifier();
+
+        if (sizeIdentifier.equals("1x1_Square")) {
+            path1 = path1.replace("%r", "1x1/");
+            if (FileUtil.getFile(path1).exists()) {
+                FileUtil.getFile(path1).delete();
+            }
+            File schematic1 = FileUtil.getOrMakeFile(path1);
+            Region region1 = new Region(region.getPrimary(), region.getSecondary());
+            SchematicManager.save(region1, schematic1);
+            dungeonRoom.setSchematics(new ArrayList<>(Arrays.asList(schematic1.getName())));
+        } else if (sizeIdentifier.equals("2x2_Square")) {
+            path1 = path1.replace("%r", "2x2/");
+            path2 = path2.replace("%r", "2x2/");
+            path3 = path3.replace("%r", "2x2/");
+            path4 = path4.replace("%r", "2x2/");
+            if (FileUtil.getFile(path1).exists()) {
+                FileUtil.getFile(path1).delete();
+            }
+            if (FileUtil.getFile(path2).exists()) {
+                FileUtil.getFile(path2).delete();
+            }
+            if (FileUtil.getFile(path3).exists()) {
+                FileUtil.getFile(path3).delete();
+            }
+            if (FileUtil.getFile(path4).exists()) {
+                FileUtil.getFile(path4).delete();
+            }
+            File schematic1 = FileUtil.getOrMakeFile(path1);
+            File schematic2 = FileUtil.getOrMakeFile(path2);
+            File schematic3 = FileUtil.getOrMakeFile(path3);
+            File schematic4 = FileUtil.getOrMakeFile(path4);
+            firstLocationChange = region.getSecondary().clone().add(-31.0, 0.0, -31.0);
+            Region region1 = new Region(region.getPrimary(), firstLocationChange);
+            SchematicManager.save(region1, schematic1);
+            secondLocationChange = region.getPrimary().clone().add(0.0, 0.0, 34.0);
+            thirdLocationChange = region.getSecondary().clone().add(-31.0, 0.0, 0.0);
+            Region region2 = new Region(secondLocationChange, thirdLocationChange);
+            SchematicManager.save(region2, schematic2);
+            fourthLocationChange = region.getPrimary().clone().add(34.0, 0.0, 34.0);
+            Region region3 = new Region(fourthLocationChange, region.getSecondary());
+            SchematicManager.save(region3, schematic3);
+            fifthLocationChange = region.getPrimary().clone().add(34.0, 0.0, 0.0);
+            sixthLocationChange = region.getSecondary().clone().add(0.0, 0.0, -31.0);
+            Region region4 = new Region(fifthLocationChange, sixthLocationChange);
+            SchematicManager.save(region4, schematic4);
+            dungeonRoom.setSchematics(new ArrayList<>(Arrays.asList(schematic1.getName(), schematic2.getName(), schematic3.getName(), schematic4.getName())));
+        } else if (sizeIdentifier.equals("1x1x1_L")) {
+            path1 = path1.replace("%r", "1x1x1/");
+            path2 = path2.replace("%r", "1x1x1/");
+            path3 = path3.replace("%r", "1x1x1/");
+            if (FileUtil.getFile(path1).exists()) {
+                FileUtil.getFile(path1).delete();
+            }
+            if (FileUtil.getFile(path2).exists()) {
+                FileUtil.getFile(path2).delete();
+            }
+            if (FileUtil.getFile(path3).exists()) {
+                FileUtil.getFile(path3).delete();
+            }
+            File schematic1 = FileUtil.getOrMakeFile(path1);
+            File schematic2 = FileUtil.getOrMakeFile(path2);
+            File schematic3 = FileUtil.getOrMakeFile(path3);
+            firstLocationChange = region.getPrimary().clone().add(0.0, 0.0, 34.0);
+            secondLocationChange = region.getSecondary().clone().add(-34.0, 0.0, 0.0);
+            Region region1 = new Region(firstLocationChange, secondLocationChange);
+            SchematicManager.save(region1, schematic1);
+            thirdLocationChange = region.getSecondary().clone().add(-31.0, 0.0, -31.0);
+            Region region2 = new Region(region.getPrimary(), thirdLocationChange);
+            SchematicManager.save(region2, schematic2);
+            fourthLocationChange = region.getPrimary().clone().add(34.0, 0.0, 0.0);
+            fifthLocationChange = region.getSecondary().clone().add(0.0, 0.0, -34.0);
+            Region region3 = new Region(fourthLocationChange, fifthLocationChange);
+            SchematicManager.save(region3, schematic3);
+            dungeonRoom.setSchematics(new ArrayList<>(Arrays.asList(schematic1.getName(), schematic2.getName(), schematic3.getName())));
+        } else if (sizeIdentifier.equals("1x2_Rectangle")) {
+            path1 = path1.replace("%r", "1x2/");
+            path2 = path2.replace("%r", "1x2/");
+            if (FileUtil.getFile(path1).exists()) {
+                FileUtil.getFile(path1).delete();
+            }
+            if (FileUtil.getFile(path2).exists()) {
+                FileUtil.getFile(path2).delete();
+            }
+            File schematic1 = FileUtil.getOrMakeFile(path1);
+            File schematic2 = FileUtil.getOrMakeFile(path2);
+            firstLocationChange = region.getSecondary().clone().add(0.0, 0.0, -31.0);
+            secondLocationChange = region.getPrimary().clone().add(0.0, 0.0, 34.0);
+            Region region1 = new Region(region.getPrimary(), firstLocationChange);
+            Region region2 = new Region(secondLocationChange, region.getSecondary());
+            SchematicManager.save(region1, schematic1);
+            SchematicManager.save(region2, schematic2);
+            dungeonRoom.setSchematics(new ArrayList<>(Arrays.asList(schematic1.getName(), schematic2.getName())));
+        } else if (sizeIdentifier.equals("1x3_Rectangle")) {
+            path1 = path1.replace("%r", "1x3/");
+            path2 = path2.replace("%r", "1x3/");
+            path3 = path3.replace("%r", "1x3/");
+            if (FileUtil.getFile(path1).exists()) {
+                FileUtil.getFile(path1).delete();
+            }
+            if (FileUtil.getFile(path2).exists()) {
+                FileUtil.getFile(path2).delete();
+            }
+            if (FileUtil.getFile(path3).exists()) {
+                FileUtil.getFile(path3).delete();
+            }
+            File schematic1 = FileUtil.getOrMakeFile(path1);
+            File schematic2 = FileUtil.getOrMakeFile(path2);
+            File schematic3 = FileUtil.getOrMakeFile(path3);
+            firstLocationChange = region.getSecondary().clone().add(0.0, 0.0, -64.0);
+            Region region1 = new Region(region.getPrimary(), firstLocationChange);
+            SchematicManager.save(region1, schematic1);
+            secondLocationChange = region.getPrimary().clone().add(0.0, 0.0, 34.0);
+            thirdLocationChange = region.getSecondary().clone().add(0.0, 0.0, -31.0);
+            Region region2 = new Region(secondLocationChange, thirdLocationChange);
+            SchematicManager.save(region2, schematic2);
+            fourthLocationChange = region.getPrimary().clone().add(0.0, 0.0, 68.0);
+            Region region3 = new Region(fourthLocationChange, region.getSecondary());
+            SchematicManager.save(region3, schematic3);
+            dungeonRoom.setSchematics(new ArrayList<>(Arrays.asList(schematic1.getName(), schematic2.getName(), schematic3.getName())));
+        } else if (sizeIdentifier.equals("1x4_Rectangle")) {
+            path1 = path1.replace("%r", "1x4/");
+            path2 = path2.replace("%r", "1x4/");
+            path3 = path3.replace("%r", "1x4/");
+            path4 = path4.replace("%r", "1x4/");
+            if (FileUtil.getFile(path1).exists()) {
+                FileUtil.getFile(path1).delete();
+            }
+            if (FileUtil.getFile(path2).exists()) {
+                FileUtil.getFile(path2).delete();
+            }
+            if (FileUtil.getFile(path3).exists()) {
+                FileUtil.getFile(path3).delete();
+            }
+            if (FileUtil.getFile(path4).exists()) {
+                FileUtil.getFile(path4).delete();
+            }
+            File schematic1 = FileUtil.getOrMakeFile(path1);
+            File schematic2 = FileUtil.getOrMakeFile(path2);
+            File schematic3 = FileUtil.getOrMakeFile(path3);
+            File schematic4 = FileUtil.getOrMakeFile(path4);
+            firstLocationChange = region.getSecondary().clone().add(0.0, 0.0, -97.0);
+            Region region1 = new Region(region.getPrimary(), firstLocationChange);
+            SchematicManager.save(region1, schematic1);
+            secondLocationChange = region.getPrimary().clone().add(0.0, 0.0, 34);
+            thirdLocationChange = region.getSecondary().clone().add(0.0, 0.0, -64.0);
+            Region region2 = new Region(secondLocationChange, thirdLocationChange);
+            SchematicManager.save(region2, schematic2);
+            fourthLocationChange = region.getPrimary().clone().add(0.0, 0.0, 68.0);
+            fifthLocationChange = region.getSecondary().clone().add(0.0, 0.0, -31);
+            Region region3 = new Region(fourthLocationChange, fifthLocationChange);
+            SchematicManager.save(region3, schematic3);
+            sixthLocationChange = region.getPrimary().clone().add(0.0, 0.0, 102.0);
+            Region region4 = new Region(sixthLocationChange, region.getSecondary());
+            SchematicManager.save(region4, schematic4);
+            dungeonRoom.setSchematics(new ArrayList<>(Arrays.asList(schematic1.getName(), schematic2.getName(), schematic3.getName(), schematic4.getName())));
+        }
+        dungeonRoom.setRoomCenter(region.getPrimary().clone().add(15, 0, 15));
+        Common.tell(player, "Updated room schematics");
+    }
+
 }

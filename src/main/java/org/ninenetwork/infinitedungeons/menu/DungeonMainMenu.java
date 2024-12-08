@@ -1,6 +1,5 @@
 package org.ninenetwork.infinitedungeons.menu;
 
-import com.gmail.nossr50.datatypes.party.Party;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -9,23 +8,24 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.mineacademy.fo.Common;
-import org.mineacademy.fo.annotation.AutoRegister;
 import org.mineacademy.fo.menu.Menu;
 import org.mineacademy.fo.menu.MenuPagged;
 import org.mineacademy.fo.menu.button.Button;
-import org.mineacademy.fo.menu.button.ButtonConversation;
 import org.mineacademy.fo.menu.button.ButtonMenu;
 import org.mineacademy.fo.menu.button.annotation.Position;
 import org.mineacademy.fo.menu.model.ItemCreator;
 import org.mineacademy.fo.remain.CompMaterial;
 import org.ninenetwork.infinitedungeons.PlayerCache;
+import org.ninenetwork.infinitedungeons.dungeon.DungeonFunctions;
+import org.ninenetwork.infinitedungeons.dungeon.DungeonType;
 import org.ninenetwork.infinitedungeons.party.DungeonParty;
+import org.ninenetwork.infinitedungeons.party.DungeonQueue;
 import org.ninenetwork.infinitedungeons.prompt.PartyMessagePrompt;
 import org.ninenetwork.infinitedungeons.util.GeneralUtils;
 import org.ninenetwork.infinitedungeons.util.SkullCreator;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 public class DungeonMainMenu extends Menu {
@@ -75,7 +75,9 @@ public class DungeonMainMenu extends Menu {
         this.setTitle("Dungeons");
         this.setSize(9 * 6);
 
-        this.findPartyButton = new ButtonMenu(new ListedPartyMenu(player, 7), CompMaterial.REDSTONE_BLOCK,
+        Collection<DungeonParty> collection = DungeonQueue.getDungeonQueue().getPartiesInQueue();
+
+        this.findPartyButton = new ButtonMenu(new ListedPartyMenu(player, 7, collection), CompMaterial.REDSTONE_BLOCK,
                 "&aFind A Party");
 
         entranceButton = new Button() {
@@ -117,11 +119,9 @@ public class DungeonMainMenu extends Menu {
             public void onClickedInMenu(Player player, Menu menu, ClickType clickType) {
                 PlayerCache cache = PlayerCache.from(player);
                 String currentlyViewing = cache.getCurrentViewing();
-                if (currentlyViewing.equals("Catacombs")) {
-                    Common.tell(player, "cata");
-                } else {
-                    Common.tell(player, "master");
-                }
+                DungeonFunctions.startDungeon(player, getDungeonType(currentlyViewing), 1);
+                player.closeInventory();
+                Common.tell(player, "&fGenerating your dungeon!");
             }
 
             @Override
@@ -130,7 +130,7 @@ public class DungeonMainMenu extends Menu {
                 PlayerCache cache = PlayerCache.from(player);
                 String currentlyViewing = cache.getCurrentViewing();
                 if (currentlyViewing.equals("Catacombs")) {
-                    ItemStack item = SkullCreator.createSkullItem("http://textures.minecraft.net/texture/ccda0476230e64a917ec1cf26df9b696e2716efe96ae34b9669a6ec525baaa");
+                    ItemStack item = org.mineacademy.fo.menu.model.SkullCreator.itemFromUrl("http://textures.minecraft.net/texture/ccda0476230e64a917ec1cf26df9b696e2716efe96ae34b9669a6ec525baaa");
                     SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
                     skullMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&aThe Catacombs &8- &eFloor I"));
                     ArrayList<String> lore = new ArrayList<>();
@@ -139,7 +139,7 @@ public class DungeonMainMenu extends Menu {
                     item.setItemMeta(skullMeta);
                     return item;
                 } else {
-                    ItemStack item = SkullCreator.createSkullItem("http://textures.minecraft.net/texture/ac578027371b3bb636dee2d77d46a0126dfc3d3d40a929d5d4bef06069469a08");
+                    ItemStack item = org.mineacademy.fo.menu.model.SkullCreator.itemFromUrl("http://textures.minecraft.net/texture/ac578027371b3bb636dee2d77d46a0126dfc3d3d40a929d5d4bef06069469a08");
                     SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
                     skullMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&c&lMM &cCatacombs &8- &eFloor I"));
                     ArrayList<String> lore = new ArrayList<>();
@@ -156,11 +156,9 @@ public class DungeonMainMenu extends Menu {
             public void onClickedInMenu(Player player, Menu menu, ClickType clickType) {
                 PlayerCache cache = PlayerCache.from(player);
                 String currentlyViewing = cache.getCurrentViewing();
-                if (currentlyViewing.equals("Catacombs")) {
-                    Common.tell(player, "cata");
-                } else {
-                    Common.tell(player, "master");
-                }
+                DungeonFunctions.startDungeon(player, getDungeonType(currentlyViewing), 2);
+                player.closeInventory();
+                Common.tell(player, "&fGenerating your dungeon!");
             }
 
             @Override
@@ -169,7 +167,7 @@ public class DungeonMainMenu extends Menu {
                 PlayerCache cache = PlayerCache.from(player);
                 String currentlyViewing = cache.getCurrentViewing();
                 if (currentlyViewing.equals("Catacombs")) {
-                    ItemStack item = SkullCreator.createSkullItem("http://textures.minecraft.net/texture/ccda0476230e64a917ec1cf26df9b696e2716efe96ae34b9669a6ec525baaa");
+                    ItemStack item = org.mineacademy.fo.menu.model.SkullCreator.itemFromUrl("http://textures.minecraft.net/texture/ccda0476230e64a917ec1cf26df9b696e2716efe96ae34b9669a6ec525baaa");
                     SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
                     skullMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&aThe Catacombs &8- &eFloor II"));
                     ArrayList<String> lore = new ArrayList<>();
@@ -178,7 +176,7 @@ public class DungeonMainMenu extends Menu {
                     item.setItemMeta(skullMeta);
                     return item;
                 } else {
-                    ItemStack item = SkullCreator.createSkullItem("http://textures.minecraft.net/texture/ac578027371b3bb636dee2d77d46a0126dfc3d3d40a929d5d4bef06069469a08");
+                    ItemStack item = org.mineacademy.fo.menu.model.SkullCreator.itemFromUrl("http://textures.minecraft.net/texture/ac578027371b3bb636dee2d77d46a0126dfc3d3d40a929d5d4bef06069469a08");
                     SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
                     skullMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&c&lMM &cCatacombs &8- &eFloor II"));
                     ArrayList<String> lore = new ArrayList<>();
@@ -195,11 +193,9 @@ public class DungeonMainMenu extends Menu {
             public void onClickedInMenu(Player player, Menu menu, ClickType clickType) {
                 PlayerCache cache = PlayerCache.from(player);
                 String currentlyViewing = cache.getCurrentViewing();
-                if (currentlyViewing.equals("Catacombs")) {
-                    Common.tell(player, "cata");
-                } else {
-                    Common.tell(player, "master");
-                }
+                DungeonFunctions.startDungeon(player, getDungeonType(currentlyViewing), 3);
+                player.closeInventory();
+                Common.tell(player, "&fGenerating your dungeon!");
             }
 
             @Override
@@ -208,7 +204,7 @@ public class DungeonMainMenu extends Menu {
                 PlayerCache cache = PlayerCache.from(player);
                 String currentlyViewing = cache.getCurrentViewing();
                 if (currentlyViewing.equals("Catacombs")) {
-                    ItemStack item = SkullCreator.createSkullItem("http://textures.minecraft.net/texture/ccda0476230e64a917ec1cf26df9b696e2716efe96ae34b9669a6ec525baaa");
+                    ItemStack item = org.mineacademy.fo.menu.model.SkullCreator.itemFromUrl("http://textures.minecraft.net/texture/ccda0476230e64a917ec1cf26df9b696e2716efe96ae34b9669a6ec525baaa");
                     SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
                     skullMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&aThe Catacombs &8- &eFloor III"));
                     ArrayList<String> lore = new ArrayList<>();
@@ -217,7 +213,7 @@ public class DungeonMainMenu extends Menu {
                     item.setItemMeta(skullMeta);
                     return item;
                 } else {
-                    ItemStack item = SkullCreator.createSkullItem("http://textures.minecraft.net/texture/ac578027371b3bb636dee2d77d46a0126dfc3d3d40a929d5d4bef06069469a08");
+                    ItemStack item = org.mineacademy.fo.menu.model.SkullCreator.itemFromUrl("http://textures.minecraft.net/texture/ac578027371b3bb636dee2d77d46a0126dfc3d3d40a929d5d4bef06069469a08");
                     SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
                     skullMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&c&lMM &cCatacombs &8- &eFloor III"));
                     ArrayList<String> lore = new ArrayList<>();
@@ -234,11 +230,9 @@ public class DungeonMainMenu extends Menu {
             public void onClickedInMenu(Player player, Menu menu, ClickType clickType) {
                 PlayerCache cache = PlayerCache.from(player);
                 String currentlyViewing = cache.getCurrentViewing();
-                if (currentlyViewing.equals("Catacombs")) {
-                    Common.tell(player, "cata");
-                } else {
-                    Common.tell(player, "master");
-                }
+                DungeonFunctions.startDungeon(player, getDungeonType(currentlyViewing), 4);
+                player.closeInventory();
+                Common.tell(player, "&fGenerating your dungeon!");
             }
 
             @Override
@@ -247,7 +241,7 @@ public class DungeonMainMenu extends Menu {
                 PlayerCache cache = PlayerCache.from(player);
                 String currentlyViewing = cache.getCurrentViewing();
                 if (currentlyViewing.equals("Catacombs")) {
-                    ItemStack item = SkullCreator.createSkullItem("http://textures.minecraft.net/texture/ccda0476230e64a917ec1cf26df9b696e2716efe96ae34b9669a6ec525baaa");
+                    ItemStack item = org.mineacademy.fo.menu.model.SkullCreator.itemFromUrl("http://textures.minecraft.net/texture/ccda0476230e64a917ec1cf26df9b696e2716efe96ae34b9669a6ec525baaa");
                     SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
                     skullMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&aThe Catacombs &8- &eFloor IV"));
                     ArrayList<String> lore = new ArrayList<>();
@@ -256,7 +250,7 @@ public class DungeonMainMenu extends Menu {
                     item.setItemMeta(skullMeta);
                     return item;
                 } else {
-                    ItemStack item = SkullCreator.createSkullItem("http://textures.minecraft.net/texture/ac578027371b3bb636dee2d77d46a0126dfc3d3d40a929d5d4bef06069469a08");
+                    ItemStack item = org.mineacademy.fo.menu.model.SkullCreator.itemFromUrl("http://textures.minecraft.net/texture/ac578027371b3bb636dee2d77d46a0126dfc3d3d40a929d5d4bef06069469a08");
                     SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
                     skullMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&c&lMM &cCatacombs &8- &eFloor IV"));
                     ArrayList<String> lore = new ArrayList<>();
@@ -273,11 +267,9 @@ public class DungeonMainMenu extends Menu {
             public void onClickedInMenu(Player player, Menu menu, ClickType clickType) {
                 PlayerCache cache = PlayerCache.from(player);
                 String currentlyViewing = cache.getCurrentViewing();
-                if (currentlyViewing.equals("Catacombs")) {
-                    Common.tell(player, "cata");
-                } else {
-                    Common.tell(player, "master");
-                }
+                DungeonFunctions.startDungeon(player, getDungeonType(currentlyViewing), 5);
+                player.closeInventory();
+                Common.tell(player, "&fGenerating your dungeon!");
             }
 
             @Override
@@ -286,7 +278,7 @@ public class DungeonMainMenu extends Menu {
                 PlayerCache cache = PlayerCache.from(player);
                 String currentlyViewing = cache.getCurrentViewing();
                 if (currentlyViewing.equals("Catacombs")) {
-                    ItemStack item = SkullCreator.createSkullItem("http://textures.minecraft.net/texture/ccda0476230e64a917ec1cf26df9b696e2716efe96ae34b9669a6ec525baaa");
+                    ItemStack item = org.mineacademy.fo.menu.model.SkullCreator.itemFromUrl("http://textures.minecraft.net/texture/ccda0476230e64a917ec1cf26df9b696e2716efe96ae34b9669a6ec525baaa");
                     SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
                     skullMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&aThe Catacombs &8- &eFloor V"));
                     ArrayList<String> lore = new ArrayList<>();
@@ -295,7 +287,7 @@ public class DungeonMainMenu extends Menu {
                     item.setItemMeta(skullMeta);
                     return item;
                 } else {
-                    ItemStack item = SkullCreator.createSkullItem("http://textures.minecraft.net/texture/ac578027371b3bb636dee2d77d46a0126dfc3d3d40a929d5d4bef06069469a08");
+                    ItemStack item = org.mineacademy.fo.menu.model.SkullCreator.itemFromUrl("http://textures.minecraft.net/texture/ac578027371b3bb636dee2d77d46a0126dfc3d3d40a929d5d4bef06069469a08");
                     SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
                     skullMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&c&lMM &cCatacombs &8- &eFloor V"));
                     ArrayList<String> lore = new ArrayList<>();
@@ -312,11 +304,9 @@ public class DungeonMainMenu extends Menu {
             public void onClickedInMenu(Player player, Menu menu, ClickType clickType) {
                 PlayerCache cache = PlayerCache.from(player);
                 String currentlyViewing = cache.getCurrentViewing();
-                if (currentlyViewing.equals("Catacombs")) {
-                    Common.tell(player, "cata");
-                } else {
-                    Common.tell(player, "master");
-                }
+                DungeonFunctions.startDungeon(player, getDungeonType(currentlyViewing), 6);
+                player.closeInventory();
+                Common.tell(player, "&fGenerating your dungeon!");
             }
 
             @Override
@@ -325,7 +315,7 @@ public class DungeonMainMenu extends Menu {
                 PlayerCache cache = PlayerCache.from(player);
                 String currentlyViewing = cache.getCurrentViewing();
                 if (currentlyViewing.equals("Catacombs")) {
-                    ItemStack item = SkullCreator.createSkullItem("http://textures.minecraft.net/texture/ccda0476230e64a917ec1cf26df9b696e2716efe96ae34b9669a6ec525baaa");
+                    ItemStack item = org.mineacademy.fo.menu.model.SkullCreator.itemFromUrl("http://textures.minecraft.net/texture/ccda0476230e64a917ec1cf26df9b696e2716efe96ae34b9669a6ec525baaa");
                     SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
                     skullMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&aThe Catacombs &8- &eFloor VI"));
                     ArrayList<String> lore = new ArrayList<>();
@@ -334,7 +324,7 @@ public class DungeonMainMenu extends Menu {
                     item.setItemMeta(skullMeta);
                     return item;
                 } else {
-                    ItemStack item = SkullCreator.createSkullItem("http://textures.minecraft.net/texture/ac578027371b3bb636dee2d77d46a0126dfc3d3d40a929d5d4bef06069469a08");
+                    ItemStack item = org.mineacademy.fo.menu.model.SkullCreator.itemFromUrl("http://textures.minecraft.net/texture/ac578027371b3bb636dee2d77d46a0126dfc3d3d40a929d5d4bef06069469a08");
                     SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
                     skullMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&c&lMM &cCatacombs &8- &eFloor VI"));
                     ArrayList<String> lore = new ArrayList<>();
@@ -351,11 +341,9 @@ public class DungeonMainMenu extends Menu {
             public void onClickedInMenu(Player player, Menu menu, ClickType clickType) {
                 PlayerCache cache = PlayerCache.from(player);
                 String currentlyViewing = cache.getCurrentViewing();
-                if (currentlyViewing.equals("Catacombs")) {
-                    Common.tell(player, "cata");
-                } else {
-                    Common.tell(player, "master");
-                }
+                DungeonFunctions.startDungeon(player, getDungeonType(currentlyViewing), 7);
+                player.closeInventory();
+                Common.tell(player, "&fGenerating your dungeon!");
             }
 
             @Override
@@ -364,7 +352,7 @@ public class DungeonMainMenu extends Menu {
                 PlayerCache cache = PlayerCache.from(player);
                 String currentlyViewing = cache.getCurrentViewing();
                 if (currentlyViewing.equals("Catacombs")) {
-                    ItemStack item = SkullCreator.createSkullItem("http://textures.minecraft.net/texture/ccda0476230e64a917ec1cf26df9b696e2716efe96ae34b9669a6ec525baaa");
+                    ItemStack item = org.mineacademy.fo.menu.model.SkullCreator.itemFromUrl("http://textures.minecraft.net/texture/ccda0476230e64a917ec1cf26df9b696e2716efe96ae34b9669a6ec525baaa");
                     SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
                     skullMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&aThe Catacombs &8- &eFloor VII"));
                     ArrayList<String> lore = new ArrayList<>();
@@ -373,7 +361,7 @@ public class DungeonMainMenu extends Menu {
                     item.setItemMeta(skullMeta);
                     return item;
                 } else {
-                    ItemStack item = SkullCreator.createSkullItem("http://textures.minecraft.net/texture/ac578027371b3bb636dee2d77d46a0126dfc3d3d40a929d5d4bef06069469a08");
+                    ItemStack item = org.mineacademy.fo.menu.model.SkullCreator.itemFromUrl("http://textures.minecraft.net/texture/ac578027371b3bb636dee2d77d46a0126dfc3d3d40a929d5d4bef06069469a08");
                     SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
                     skullMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&c&lMM &cCatacombs &8- &eFloor VII"));
                     ArrayList<String> lore = new ArrayList<>();
@@ -405,7 +393,7 @@ public class DungeonMainMenu extends Menu {
                 Player player = getViewer();
                 PlayerCache cache = PlayerCache.from(player);
                 if (cache.getCurrentViewing().equals("Catacombs")) {
-                    ItemStack item = SkullCreator.createSkullItem("http://textures.minecraft.net/texture/9b5871c72987266e15f1be49b1ec334ef6b618e9653fb78e918abd39563dbb93");
+                    ItemStack item = org.mineacademy.fo.menu.model.SkullCreator.itemFromUrl("http://textures.minecraft.net/texture/9b5871c72987266e15f1be49b1ec334ef6b618e9653fb78e918abd39563dbb93");
                     SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
                     assert skullMeta != null;
                     skullMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&aThe Catacombs"));
@@ -417,7 +405,7 @@ public class DungeonMainMenu extends Menu {
                     item.setItemMeta(skullMeta);
                     return item;
                 } else {
-                    ItemStack item = SkullCreator.createSkullItem("http://textures.minecraft.net/texture/e430b897dff6e2ce9ae9d1d95da2d2058ec999a7d4a242afbf156fcadbcc1c89");
+                    ItemStack item = org.mineacademy.fo.menu.model.SkullCreator.itemFromUrl("http://textures.minecraft.net/texture/e430b897dff6e2ce9ae9d1d95da2d2058ec999a7d4a242afbf156fcadbcc1c89");
                     SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
                     assert skullMeta != null;
                     skullMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&cMaster Mode"));
@@ -481,7 +469,7 @@ public class DungeonMainMenu extends Menu {
                         "&aDungeon Classes",
                         "&7View and Select a Dungeon Class",
                         " ",
-                        "&aCurrently Selected:&b " + cache.getDungeonClass(),
+                        "&aCurrently Selected:&b " + cache.getCurrentDungeonClass(),
                         " ",
                         "&eClick to open!").make();
             }
@@ -547,7 +535,7 @@ public class DungeonMainMenu extends Menu {
 
         private final Button fillButton;
 
-        public StartQueueMenu(Player player) {
+        public StartQueueMenu(Player player, int floor) {
             this.setTitle("Group Builder");
             this.setSize(9*4);
 
@@ -555,16 +543,21 @@ public class DungeonMainMenu extends Menu {
                 @Override
                 public void onClickedInMenu(Player player, Menu menu, ClickType clickType) {
                     PlayerCache cache = PlayerCache.from(player);
-                    if (!cache.isInParty()) {
-                        if (cache.getCurrentViewing().equalsIgnoreCase("Catacombs")) {
-                            cache.setCurrentViewing("Master Mode");
-                            restartMenu();
-                        } else if (cache.getCurrentViewing().equalsIgnoreCase("Master mode")) {
-                            cache.setCurrentViewing("Catacombs");
-                            restartMenu();
+                    if (DungeonParty.hasParty(player)) {
+                        DungeonParty party = DungeonParty.findPartyByPlayer(player);
+                        if (party != null) {
+                            if (DungeonParty.isLeader(player, party)) {
+                                if (!DungeonQueue.getDungeonQueue().getPartiesInQueue().contains(party)) {
+                                    if (cache.getCurrentViewing().equalsIgnoreCase("Catacombs")) {
+                                        cache.setCurrentViewing("Master Mode");
+                                        restartMenu();
+                                    } else if (cache.getCurrentViewing().equalsIgnoreCase("Master mode")) {
+                                        cache.setCurrentViewing("Catacombs");
+                                        restartMenu();
+                                    }
+                                }
+                            }
                         }
-                    } else {
-                        Common.tell(player, "You cannot use this while in a party");
                     }
                 }
 
@@ -574,7 +567,7 @@ public class DungeonMainMenu extends Menu {
                     PlayerCache cache = PlayerCache.from(player);
                     ItemStack item;
                     if (cache.getCurrentViewing().equals("Catacombs")) {
-                        item = SkullCreator.createSkullItem("http://textures.minecraft.net/texture/9b5871c72987266e15f1be49b1ec334ef6b618e9653fb78e918abd39563dbb93");
+                        item = org.mineacademy.fo.menu.model.SkullCreator.itemFromUrl("http://textures.minecraft.net/texture/9b5871c72987266e15f1be49b1ec334ef6b618e9653fb78e918abd39563dbb93");
                         SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
                         assert skullMeta != null;
                         skullMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&aSelect dungeon type"));
@@ -588,7 +581,7 @@ public class DungeonMainMenu extends Menu {
                         skullMeta.setLore(lore);
                         item.setItemMeta(skullMeta);
                     } else {
-                        item = SkullCreator.createSkullItem("http://textures.minecraft.net/texture/e430b897dff6e2ce9ae9d1d95da2d2058ec999a7d4a242afbf156fcadbcc1c89");
+                        item = org.mineacademy.fo.menu.model.SkullCreator.itemFromUrl("http://textures.minecraft.net/texture/e430b897dff6e2ce9ae9d1d95da2d2058ec999a7d4a242afbf156fcadbcc1c89");
                         SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
                         assert skullMeta != null;
                         skullMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&aSelect dungeon type"));
@@ -657,7 +650,7 @@ public class DungeonMainMenu extends Menu {
                     PlayerCache cache = PlayerCache.from(getViewer());
                     return ItemCreator.of(CompMaterial.NETHER_STAR, "&aSet Class Level Required",
                             "&7Add a class level requirement to",
-                            "&7to the group so only players that have",
+                            "&7the group so only players that have",
                             "&7the desired class level will be",
                             "&7able to join.",
                             " ",
@@ -694,14 +687,10 @@ public class DungeonMainMenu extends Menu {
                 @Override
                 public void onClickedInMenu(Player player, Menu menu, ClickType clickType) {
                     PlayerCache cache = PlayerCache.from(player);
-                    if (!cache.isInParty()) {
-                        DungeonParty party = DungeonParty.loadOrCreateDungeonParty(player.getName(), cache.getCurrentViewing(), cache.getSelectedFloor(), cache.getDungeonLevelRequired());
-                        party.setCurrentMembers(new ArrayList<>(Arrays.asList(player.getName())));
-                        cache.setInParty(true);
+                    if (!DungeonParty.hasParty(player)) {
+                        DungeonParty party = new DungeonParty(player, getDungeonType(cache.getCurrentViewing()));
+                        Common.tell(player, "Your party has been queued.");
                         player.closeInventory();
-                    } else {
-                        player.closeInventory();
-                        Common.tell(player, "You can not do this while already in a party.");
                     }
                 }
 
@@ -718,7 +707,8 @@ public class DungeonMainMenu extends Menu {
             backButton = new Button() {
                 @Override
                 public void onClickedInMenu(Player player, Menu menu, ClickType clickType) {
-                    new ListedPartyMenu(player, 1).displayTo(player);
+                    Collection<DungeonParty> collection = DungeonQueue.getDungeonQueue().getPartiesInQueue();
+                    new ListedPartyMenu(player, floor, collection).displayTo(player);
                 }
 
                 @Override
@@ -766,19 +756,50 @@ public class DungeonMainMenu extends Menu {
         @Position(45)
         private final Button startNewQueue;
 
-        ListedPartyMenu(Player player, int floor) {
-            super(9 * 6, DungeonMainMenu.this, DungeonParty.getDungeonPartysByFloor(floor));
+        ListedPartyMenu(Player player, int floor, Collection<DungeonParty> parties) {
+            super(9 * 6, DungeonMainMenu.this, parties);
             this.setTitle("Party Finder");
             this.setSize(9 * 6);
 
             startNewQueue = new Button() {
                 @Override
                 public void onClickedInMenu(Player player, Menu menu, ClickType clickType) {
-                    new StartQueueMenu(player).displayTo(player);
+                    if (DungeonParty.hasParty(player)) {
+                        DungeonParty party = DungeonParty.findPartyByPlayer(player);
+                        if (DungeonParty.isLeader(player, party)) {
+                            if (DungeonQueue.getDungeonQueue().getPartiesInQueue().contains(party)) {
+                                DungeonQueue.getDungeonQueue().removePartyFromQueue(party);
+                                for (Player p : party.getPlayers()) {
+                                    Common.tell(p, "Your dungeon party has been dequeued");
+                                }
+                                restartMenu();
+                            } else {
+                                DungeonQueue.getDungeonQueue().addPartyToQueue(party);
+                                for (Player p : party.getPlayers()) {
+                                    Common.tell(p, "Your dungeon party has been queued");
+                                }
+                                restartMenu();
+                            }
+                        } else {
+                            Common.tell(player, "Only the party leader can do this.");
+                            player.closeInventory();
+                        }
+                    } else {
+                        new StartQueueMenu(player, floor).displayTo(player);
+                    }
                 }
 
                 @Override
                 public ItemStack getItem() {
+                    if (DungeonParty.hasParty(player)) {
+                        if (DungeonParty.isLeader(player, DungeonParty.findPartyByPlayer(player))) {
+                            return ItemCreator.of(CompMaterial.IRON_BLOCK, "&aYour party is currently queued!",
+                                    " ",
+                                    "&eClick to dequeue!").make();
+                        } else {
+                            return ItemCreator.of(CompMaterial.IRON_BLOCK, "&aYour party is currently queued!").make();
+                        }
+                    }
                     return ItemCreator.of(CompMaterial.REDSTONE_BLOCK, "&aStart a new queue",
                             "&7Queue up with other players",
                             "&7to defeat a dungeon",
@@ -836,22 +857,23 @@ public class DungeonMainMenu extends Menu {
 
         @Override
         protected ItemStack convertToItemStack(DungeonParty dungeonParty) {
-            String leaderName = dungeonParty.getLeaderName();
-            assert leaderName != null;
+            String leaderName = dungeonParty.getLeader().getName();
+            Player player = getViewer();
+            PlayerCache cache = PlayerCache.from(player);
             ItemStack item = SkullCreator.createSkullItemFromPlayer(leaderName);
             SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
-            assert skullMeta != null;
             skullMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&b" + leaderName + "'s Party"));
             ArrayList<String> lore = new ArrayList<>();
             lore.add(ChatColor.translateAlternateColorCodes('&', "&7Dungeon: &bThe Catacombs"));
-            lore.add(ChatColor.translateAlternateColorCodes('&', "&7Floor: &b" + dungeonParty.getFloor()));
-            lore.add(ChatColor.translateAlternateColorCodes('&', "&7Dungeon Level Required: &b" + dungeonParty.getMinimum()));
+            lore.add(ChatColor.translateAlternateColorCodes('&', "&7Floor: &b" + dungeonParty.getDungeonFloor()));
+            lore.add(ChatColor.translateAlternateColorCodes('&', "&7Dungeon Level Required: &b" + dungeonParty.getDungeonLevelRequirement()));
+            lore.add(ChatColor.translateAlternateColorCodes('&', "&7Class Level Required: &b" + dungeonParty.getClassLevelRequirement()));
+            lore.add(ChatColor.translateAlternateColorCodes('&', "&eNote: &f" + cache.getGroupNote()));
             lore.add(" ");
             lore.add(ChatColor.translateAlternateColorCodes('&', "&7Members"));
-            assert dungeonParty.getCurrentMembers() != null;
             int count = 0;
-            for (String member : dungeonParty.getCurrentMembers()) {
-                lore.add(ChatColor.translateAlternateColorCodes('&', "&f" + member));
+            for (Player p : dungeonParty.getPlayers()) {
+                lore.add(ChatColor.translateAlternateColorCodes('&', "&f" + p.getName()));
                 count++;
             }
             for (int i = count; i < 5; i++) {
@@ -866,8 +888,13 @@ public class DungeonMainMenu extends Menu {
 
         @Override
         protected void onPageClick(Player player, DungeonParty dungeonParty, ClickType clickType) {
-            Common.tell(player, "Registering Click to add to " + dungeonParty.getLeaderName());
-            DungeonParty.addPlayerToParty(dungeonParty.getLeaderName(), player);
+            Common.tell(player, "Registering Click to add to " + dungeonParty.getLeader().getName());
+            if (DungeonParty.hasParty(player)) {
+                player.closeInventory();
+                Common.tell(player, "You are already in a party.");
+            } else {
+                dungeonParty.joinPlayer(player);
+            }
         }
 
         @Override
@@ -894,62 +921,21 @@ public class DungeonMainMenu extends Menu {
         protected List<Button> getButtonsToAutoRegister() {
             return super.getButtonsToAutoRegister();
         }
+
     }
 
-    private static int getRequiredLevel(int floor, String viewType) {
-        int requiredLevel = 0;
-        if (floor == 0) {
-            requiredLevel = 0;
-        } else if (floor == 1) {
-            if (viewType.equals("Catacombs")) {
-                requiredLevel = 1;
-            } else {
-                requiredLevel = 24;
-            }
-        } else if (floor == 2) {
-            if (viewType.equals("Catacombs")) {
-                requiredLevel = 3;
-            } else {
-                requiredLevel = 26;
-            }
-        } else if (floor == 3) {
-            if (viewType.equals("Catacombs")) {
-                requiredLevel = 5;
-            } else {
-                requiredLevel = 28;
-            }
-        } else if (floor == 4) {
-            if (viewType.equals("Catacombs")) {
-                requiredLevel = 9;
-            } else {
-                requiredLevel = 30;
-            }
-        } else if (floor == 5) {
-            if (viewType.equals("Catacombs")) {
-                requiredLevel = 14;
-            } else {
-                requiredLevel = 32;
-            }
-        } else if (floor == 6) {
-            if (viewType.equals("Catacombs")) {
-                requiredLevel = 19;
-            } else {
-                requiredLevel = 34;
-            }
-        } else if (floor == 7) {
-            if (viewType.equals("Catacombs")) {
-                requiredLevel = 24;
-            } else {
-                requiredLevel = 36;
-            }
+    private static DungeonType getDungeonType(String string) {
+        if (string.equalsIgnoreCase("Catacombs")) {
+            return DungeonType.CATACOMBS;
+        } else {
+            return DungeonType.MASTER;
         }
-        return requiredLevel;
     }
 
     private static ArrayList<String> floorLoreBuilder(ArrayList<String> lore, Player player, String viewType, int floor) {
         boolean unlocked = false;
         PlayerCache cache = PlayerCache.from(player);
-        int requiredLevel = getRequiredLevel(floor, viewType);
+        int requiredLevel = GeneralUtils.getRequiredLevel(floor, viewType);
         String add;
         if (viewType.equals("Master Mode")) {
             add = ChatColor.translateAlternateColorCodes('&', "&c&lMASTER ");

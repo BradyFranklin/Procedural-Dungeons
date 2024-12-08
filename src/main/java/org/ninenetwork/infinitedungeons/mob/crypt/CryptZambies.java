@@ -45,7 +45,7 @@ public class CryptZambies extends Zombie {
         this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true));
 
         final Entity bukkitEntity = getBukkitEntity();
-        bukkitEntity.setCustomName(Common.colorize(DungeonMobUtil.getEntityDefaultNametag(bukkitEntity, "Crypting Zombie", "#F1FC01", "#FDBA40")));
+        //bukkitEntity.setCustomName(Common.colorize(DungeonMobUtil.getEntityDefaultNametag(bukkitEntity, "Crypting Zombie", "#F1FC01", "#FDBA40", 100)));
         bukkitEntity.setCustomNameVisible(true);
 
         DungeonMobUtil.createDyedArmorPieces(bukkitEntity, Color.YELLOW);

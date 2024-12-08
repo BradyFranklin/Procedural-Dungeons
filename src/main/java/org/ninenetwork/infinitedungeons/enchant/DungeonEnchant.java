@@ -1,4 +1,4 @@
-package org.ninenetwork.infinitedungeons.item;
+package org.ninenetwork.infinitedungeons.enchant;
 
 import org.ninenetwork.infinitedungeons.util.GeneralUtils;
 
@@ -8,6 +8,10 @@ public enum DungeonEnchant {
     QUICK_STRIKE2("QuickStrike2", "&9Quick Strike II"),
     QUICK_STRIKE3("QuickStrike3", "&9Quick Strike III"),
     QUICK_STRIKE4("QuickStrike4", GeneralUtils.formatStringWithRainbowGradient("Quick Strike IV", false)),
+    DOUBLE_STRIKE1("DoubleStrike1", "&9Double Strike I"),
+    DOUBLE_STRIKE2("DoubleStrike1", "&9Double Strike II"),
+    DOUBLE_STRIKE3("DoubleStrike1", "&9Double Strike III"),
+    DOUBLE_STRIKE4("DoubleStrike1", GeneralUtils.formatStringWithRainbowGradient("Double Strike IV", false)),
     REPLENISH1("Replenish1", "&9Replenish I"),
     REPLENISH2("Replenish2", "&9Replenish II"),
     REPLENISH3("Replenish3", "&9Replenish III"),

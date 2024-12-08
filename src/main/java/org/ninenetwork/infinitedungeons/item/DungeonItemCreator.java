@@ -10,14 +10,12 @@ import org.ninenetwork.infinitedungeons.settings.Settings;
 import java.util.ArrayList;
 import java.util.List;
 
-public class WeaponItemCreator {
+public class DungeonItemCreator {
 
     public static ItemStack createWeapon(String name) {
-
         ItemStack item = null;
         ItemMeta meta = null;
         ArrayList<String> lore = new ArrayList<>();
-
         if (name.equalsIgnoreCase("Hyperion")) {
             item = new ItemStack(Material.IRON_SWORD, 1);
             meta = item.getItemMeta();
@@ -32,7 +30,6 @@ public class WeaponItemCreator {
         meta.setLore(lore);
         item.setItemMeta(meta);
         return item;
-
     }
 
     public static List<String> createLore(String itemType, List<String> lore) {

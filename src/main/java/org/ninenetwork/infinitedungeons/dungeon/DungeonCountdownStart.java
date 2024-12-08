@@ -1,8 +1,11 @@
 package org.ninenetwork.infinitedungeons.dungeon;
 
 import lombok.Getter;
+import org.bukkit.entity.Player;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.model.Countdown;
+import org.mineacademy.fo.model.SimpleTime;
+import org.ninenetwork.infinitedungeons.PlayerCache;
 
 public class DungeonCountdownStart extends Countdown {
 
@@ -10,15 +13,19 @@ public class DungeonCountdownStart extends Countdown {
     private final Dungeon dungeon;
 
     protected DungeonCountdownStart(final Dungeon dungeon) {
-        super(dungeon.getLobbyDuration());
+        super(SimpleTime.from("10 seconds"));
         this.dungeon = dungeon;
     }
 
     @Override
     protected void onTick() {
-        // Broadcast every fifth second or every second when there are 5 or less seconds left
-        if (this.getTimeLeft() <= 5 || this.getTimeLeft() % 10 == 0)
-            this.dungeon.broadcastWarn("Dungeon starts in less than " + Common.plural(this.getTimeLeft(), "second"));
+        for (PlayerCache cache : this.dungeon.getPlayerCaches()) {
+            if (!cache.isReady()) {
+                this.dungeon.broadcastWarn(cache.toPlayer().getName() + " is no longer ready!");
+                this.dungeon.checkBeginCountdown(this.dungeon, this.dungeon.getStartCountdown());
+                this.cancel();
+            }
+        }
     }
 
     @Override

@@ -1,14 +1,20 @@
-package org.ninenetwork.infinitedungeons.item.weapons;
+package org.ninenetwork.infinitedungeons.item;
 
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.mineacademy.fo.plugin.SimplePlugin;
+import org.ninenetwork.infinitedungeons.playerstats.PlayerStat;
+import org.ninenetwork.infinitedungeons.util.SkullCreator;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
 
 public abstract class AbstractDungeonItem implements Listener {
 
@@ -37,17 +43,65 @@ public abstract class AbstractDungeonItem implements Listener {
         return itemID.equals(pdcId);
     }
 
-    public ItemStack getItem(Player player) {
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
+    public ItemStack getItem(boolean skull, String url) {
+        ItemStack item;
+        ItemMeta meta;
+        if (skull) {
+            item = SkullCreator.createSkullItem(url);
+        } else {
+            item = new ItemStack(material);
+        }
+        meta = item.getItemMeta();
 
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
         pdc.set(new NamespacedKey(plugin, "ITEM_ID"), PersistentDataType.STRING, itemID);
 
         item.setItemMeta(meta);
-        return generateItem(item, player);
+        return generateItem(item);
     }
 
-    protected abstract ItemStack generateItem(ItemStack item, Player player);
+    protected abstract ItemStack generateItem(ItemStack item);
+
+    protected abstract boolean hasAbilityOrBonus();
+
+    public abstract ItemType getItemType();
+
+    protected abstract ArrayList<String> adaptiveAdditions();
+
+    public LinkedHashMap<PlayerStat, Double> itemStatData() {
+        return null;
+    }
+
+    public List<String> itemLoreDescription() {
+        return Arrays.asList("");
+    }
+
+    public String itemRarityDescription() {
+        return null;
+    }
+
+    public List<String> itemFullSetBonus() {
+        return null;
+    }
+
+    public List<String> itemAbilityDescription() {
+        return null;
+    }
+
+    public int cooldownTime() {
+        return 0;
+    }
+
+    public int manaCost() {
+        return 0;
+    }
+
+    public double abilityDamage() {
+        return 0;
+    }
+
+    public double abilityScaling() {
+        return 0;
+    }
 
 }

@@ -1,4 +1,4 @@
-package org.ninenetwork.infinitedungeons.mob.types;
+package org.ninenetwork.infinitedungeons.mob.types.nms;
 
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
@@ -45,7 +45,7 @@ public class LastNeolithicNecromancer extends WitherSkeleton {
         this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true));
 
         final Entity bukkitEntity = getBukkitEntity();
-        bukkitEntity.setCustomName(Common.colorize(DungeonMobUtil.getEntityDefaultNametag(bukkitEntity, "Neo Necro", "#A38C8C", "#3D3D3D")));
+        //bukkitEntity.setCustomName(Common.colorize(DungeonMobUtil.getEntityDefaultNametag(bukkitEntity, "Neo Necro", "#A38C8C", "#3D3D3D", 100)));
         bukkitEntity.setCustomNameVisible(true);
 
         DungeonMobUtil.createDyedArmorPieces(bukkitEntity, Color.fromRGB(192, 192, 192));

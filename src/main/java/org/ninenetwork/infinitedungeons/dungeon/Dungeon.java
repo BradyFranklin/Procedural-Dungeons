@@ -3,12 +3,11 @@ package org.ninenetwork.infinitedungeons.dungeon;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
+import net.citizensnpcs.api.npc.NPC;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockState;
 import org.bukkit.entity.*;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -18,10 +17,10 @@ import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.*;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.mineacademy.fo.*;
 import org.mineacademy.fo.collection.StrictList;
 import org.mineacademy.fo.exception.EventHandledException;
-import org.mineacademy.fo.menu.model.ItemCreator;
 import org.mineacademy.fo.model.*;
 import org.mineacademy.fo.region.Region;
 import org.mineacademy.fo.remain.CompMaterial;
@@ -30,14 +29,24 @@ import org.mineacademy.fo.remain.Remain;
 import org.mineacademy.fo.settings.ConfigItems;
 import org.mineacademy.fo.settings.SimpleSettings;
 import org.mineacademy.fo.settings.YamlConfig;
-import org.mineacademy.fo.visual.VisualizedRegion;
+import org.ninenetwork.infinitedungeons.InfiniteDungeonsPlugin;
 import org.ninenetwork.infinitedungeons.PlayerCache;
+import org.ninenetwork.infinitedungeons.classes.DungeonClassTask;
+import org.ninenetwork.infinitedungeons.dungeon.door.DungeonDoorLock;
+import org.ninenetwork.infinitedungeons.dungeon.door.DungeonLobbyDoor;
 import org.ninenetwork.infinitedungeons.dungeon.instance.DungeonRoomInstance;
 import org.ninenetwork.infinitedungeons.dungeon.instance.DungeonRoomPoint;
+import org.ninenetwork.infinitedungeons.dungeon.secret.BlessingManager;
+import org.ninenetwork.infinitedungeons.dungeon.secret.DungeonSecretInstance;
+import org.ninenetwork.infinitedungeons.mob.DungeonMobRegistry;
 import org.ninenetwork.infinitedungeons.party.DungeonParty;
+import org.ninenetwork.infinitedungeons.playerstats.PlayerStatManager;
+import org.ninenetwork.infinitedungeons.playerstats.health.PlayerHealthHandler;
+import org.ninenetwork.infinitedungeons.settings.Settings;
+import org.ninenetwork.infinitedungeons.util.MessageUtil;
+import org.ninenetwork.infinitedungeons.world.SchematicManager;
 
 import javax.annotation.Nullable;
-import java.lang.reflect.Array;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -46,12 +55,11 @@ public abstract class Dungeon extends YamlConfig {
 
     private static final String FOLDER = "DungeonStorage/Dungeons";
 
-    public static final String TAG_TELEPORTING = "Game_Teleporting";
+    public static final String TAG_TELEPORTING = "Dungeon_Teleporting";
 
     private static final ConfigItems<? extends Dungeon> loadedFiles = ConfigItems.fromFolder(FOLDER, fileName -> {
         final YamlConfig config = YamlConfig.fromFileFast(FileUtil.getFile(FOLDER + "/" + fileName + ".yml"));
         final DungeonType type = config.get("Type", DungeonType.class);
-
         Valid.checkNotNull(type, "Unrecognized DungeonType " + config.getObject("Type") + " in " + fileName + "! Available: " + Common.join(DungeonType.values()));
         return type.getInstanceClass();
     });
@@ -69,12 +77,27 @@ public abstract class Dungeon extends YamlConfig {
     /* Local properties which are not saved to the dungeon settings file */
     /* ------------------------------------------------------------------------------- */
 
-    private final StrictList<PlayerCache> players = new StrictList<>();
+    private final StrictList<PlayerCache> playerCaches = new StrictList<>();
+
     private DungeonParty dungeonParty;
-    private Countdown startCountdown;
-    private Countdown heartbeat;
-    private DungeonScoreboard scoreboard;
+    @Setter
+    private DungeonGeneration dungeonGeneration;
+    @Setter
+    private DungeonPathfinding dungeonPathfinding;
+    @Setter
+    private DungeonSecretInstance dungeonSecretInstance;
+    @Setter
+    private DungeonIntegrity dungeonIntegrity;
+    @Setter
+    private BlessingManager blessingManager;
+    @Setter
+    private NPC lobbyNPC;
+    private final Countdown dungeonTimeTracker;
+    private final Countdown startCountdown;
+    private final Countdown heartbeat;
+    private final DungeonScoreboard scoreboard;
     private DungeonState state = DungeonState.STOPPED;
+    private final DungeonScore dungeonScore;
     private boolean stopping;
     private boolean starting;
     ArrayList<DungeonRoomPoint> pointTracking = new ArrayList<>();
@@ -82,6 +105,21 @@ public abstract class Dungeon extends YamlConfig {
     public boolean playersReady;
     @Setter
     public boolean generationComplete = false;
+    @Setter
+    public DungeonLobbyDoor lobbyDoor;
+    public ArrayList<DungeonDoorLock> bloodRushDoors = new ArrayList<>();
+    @Setter
+    private DungeonRoomInstance currentBloodRushRoom;
+    @Setter
+    private boolean playerHasKey;
+
+    @Setter
+    private int numberDeaths;
+    @Setter
+    private int failedPuzzles;
+
+    @Setter
+    private int npcSpawns;
 
     int max11Square = 20;
     int max22Square = 2;
@@ -92,9 +130,6 @@ public abstract class Dungeon extends YamlConfig {
 
     @Setter
     ArrayList<Location> pointLocations = new ArrayList<>();
-
-    @Setter
-    private int dungeonScore;
 
     @Setter
     private int floor;
@@ -113,9 +148,19 @@ public abstract class Dungeon extends YamlConfig {
 
         this.loadConfiguration(NO_DEFAULT, FOLDER + "/" + name + ".yml");
 
+        this.dungeonTimeTracker = this.compileDungeonTimeTracker();
         this.startCountdown = this.compileStartCountdown();
         this.heartbeat = this.compileHeartbeat();
         this.scoreboard = this.compileScoreboard();
+
+        this.setNumberDeaths(0);
+        this.setFailedPuzzles(0);
+        this.dungeonScore = new DungeonScore(this);
+        this.dungeonIntegrity = new DungeonIntegrity(this);
+    }
+
+    protected Countdown compileDungeonTimeTracker() {
+        return new DungeonTimeTracker(this);
     }
 
     protected Countdown compileStartCountdown() {
@@ -159,6 +204,12 @@ public abstract class Dungeon extends YamlConfig {
         this.set("Game_Duration", this.gameDuration);
     }
 
+    public void initializeMobsAllRooms(Dungeon dungeon) {
+        for (DungeonRoomInstance instance : dungeon.getDungeonRooms()) {
+            //instance.initializeRoomMobs();
+        }
+    }
+
     public void initializeDungeonPoints(ArrayList<Location> points) {
         ArrayList<DungeonRoomPoint> pointTracking = new ArrayList<>();
         int size = points.size();
@@ -199,18 +250,14 @@ public abstract class Dungeon extends YamlConfig {
         this.save();
     }
 
+    public void setFloor(int floor) {
+        this.floor = floor;
+        this.save();
+    }
     public final void setDungeonRooms(List<DungeonRoomInstance> dungeonRooms) {
         this.dungeonRooms = dungeonRooms;
         this.save();
     }
-
-    public final void addDungeonRooms(DungeonRoomInstance dungeonRoomInstance) {
-        List<DungeonRoomInstance> dungeonRoomInstances = this.dungeonRooms;
-        dungeonRoomInstances.add(dungeonRoomInstance);
-        this.dungeonRooms = dungeonRoomInstances;
-        this.save();;
-    }
-
     public final Location getLobbyLocation() {
         return this.lobbyLocation;
     }
@@ -309,78 +356,101 @@ public abstract class Dungeon extends YamlConfig {
     /* Dungeon logic */
     /* ------------------------------------------------------------------------------- */
 
-    public void initializeDungeonGeneration(DungeonParty party, DungeonType type, int dungeonFloor) {
-        String name = party.getLeaderName();
-        if (name != null) {
-            Dungeon dungeon = Dungeon.createDungeon(name, type);
-            DungeonGeneration generator = new DungeonGeneration();
-            generator.preDungeonInitialization(dungeon, 7);
-            generator.dungeonInitialization(dungeon, 7);
-        } else {
-            Common.log("Failed to initialize Dungeon");
-        }
+    public void initializeDungeonGeneration(Dungeon dungeon, DungeonParty party, DungeonType type, int dungeonFloor) {
+        this.dungeonParty = party;
+        this.blessingManager = new BlessingManager(this);
+        this.dungeonGeneration = new DungeonGeneration();
+        this.dungeonGeneration.preDungeonInitialization(dungeon, dungeonFloor);
+        this.dungeonGeneration.dungeonInitialization(dungeon, dungeonFloor);
+        Common.runLater(10, new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (Player player : party.getPlayers()) {
+                    PlayerStatManager.onDungeonStartStatEvaluation(player);
+                }
+            }
+        });
     }
 
     public void initializeDungeonLobby() {
+        //DungeonLobbyNPC.createDungeonLobbyNPC(this);
         for (Player player : this.dungeonParty.getPlayers()) {
-            player.teleport(this.lobbyLocation);
+            this.joinPlayer(player, DungeonJoinMode.PLAYING);
         }
+        checkBeginCountdown(this, this.startCountdown);
+    }
+
+    public void checkBeginCountdown(Dungeon dungeon, Countdown countdown) {
+        new BukkitRunnable() {
+            boolean allReady;
+            @Override
+            public void run() {
+                allReady = true;
+                for (PlayerCache cache : dungeon.getPlayerCaches()) {
+                    if (!cache.isReady()) {
+                        allReady = false;
+                    }
+                }
+                if (allReady) {
+                    sendCountdownTimer(dungeon);
+                    cancel();
+                }
+            }
+        }.runTaskTimerAsynchronously(InfiniteDungeonsPlugin.getInstance(), 0L, 20L);
+    }
+
+    public void sendCountdownTimer(Dungeon dungeon) {
+        new BukkitRunnable() {
+            int countdown = 10;
+            @Override
+            public void run() {
+                if (countdown > 0) {
+                    for (Player player : getPlayersFromCaches(getPlayerCaches())) {
+                        Common.tell(player, "Dungeon beginning in: " + countdown + " seconds");
+                    }
+                    countdown--;
+                } else if (countdown == 0) {
+                    for (Player player : getPlayersFromCaches(getPlayerCaches())) {
+                        Common.tell(player, "Dungeon started");
+                    }
+                    countdown--;
+                } else {
+                    dungeon.start();
+                    dungeon.getLobbyDoor().makeBlocksFall();
+                    cancel();
+                }
+            }
+        }.runTaskTimer(InfiniteDungeonsPlugin.getInstance(), 0L, 20L);
     }
 
     public void start() {
         Valid.checkBoolean(this.state == DungeonState.LOBBY, "Cannot start dungeon " + this.getName() + " while in the " + this.state + " mode");
-
-        this.state = DungeonState.PLAYED;
-        this.starting = true;
-
+        onDungeonCreationSuccess(this, this.dungeonParty);
+        Common.log("Dungeon start method reached");
         try {
-
-            if (this.players.isEmpty()) {
-                this.stop(DungeonStopReason.NOT_ENOUGH_PLAYERS);
-                return;
-            }
-
-            this.cleanEntities();
-            this.heartbeat.launch();
-            this.scoreboard.onGameStart();
-
-            // /game forcestart --> bypass lobby waiting
-            if (this.startCountdown.isRunning())
-                this.startCountdown.cancel();
-
-            try {
-                this.onDungeonStart();
-
-            } catch (final Throwable t) {
-                Common.error(t, "Failed to start dungeon " + this.getName() + ", stopping for safety");
-
-                this.stop(DungeonStopReason.ERROR);
-            }
-
+            this.state = DungeonState.PLAYED;
+            this.starting = true;
+            this.dungeonTimeTracker.launch();
+            this.scoreboard.onDungeonStart();
+            Common.runTimer(20, new DungeonClassTask(this));
             this.forEachInAllModes(cache -> {
                 Player player = cache.toPlayer();
                 // Close all players inventories
                 player.closeInventory();
                 this.onDungeonStartFor(player, cache);
             });
-
-            try {
-                this.onDungeonPostStart();
-            } catch (final Throwable t) {
-                Common.error(t, "Failed to start dungeon " + this.getName() + ", stopping for safety");
-                this.stop(DungeonStopReason.ERROR);
-            }
-
-            this.broadcastInfo("Dungeon " + this.getName() + " starts now! Players: " + this.players.size());
-            Common.log("Started dungeon " + this.getName());
-
         } finally {
-            this.starting = false;
+
         }
     }
 
     public void stop(DungeonStopReason stopReason) {
         Valid.checkBoolean(this.state != DungeonState.STOPPED, "Cannot stop stopped dungeon " + this.getName());
+        //this.lobbyNPC.despawn();
+        //this.lobbyNPC.destroy();
+
+        DungeonMobRegistry.getInstance().removeAllMobsSpecificDungeon(this);
+        SchematicManager.resetToAir(this);
 
         // Wrap in a try-finally block to properly clean the dungeon and set it back to stopped even on error
         try {
@@ -389,15 +459,20 @@ public abstract class Dungeon extends YamlConfig {
             if (this.startCountdown.isRunning())
                 this.startCountdown.cancel();
 
+            if (this.dungeonTimeTracker.isRunning())
+                this.dungeonTimeTracker.cancel();
+
             if (this.heartbeat.isRunning())
                 this.heartbeat.cancel();
 
-            final int playingPlayersCount = this.getPlayers(DungeonJoinMode.PLAYING).size();
+            DungeonMobRegistry.getInstance().removeAllMobsSpecificDungeon(this);
+
+            final int playingPlayersCount = this.getPlayerCaches(DungeonJoinMode.PLAYING).size();
 
             this.forEachPlayerInAllModes(player -> {
 
                 String stopMessage = stopReason.getMessage();
-
+                MessageUtil.dungeonEndMessage(this);
                 if (stopMessage != null) {
                     BoxedMessage.tell(player, "<center>&c&lDUNGEON OVER\n\n<center>&7"
                             + Replacer.replaceArray(stopMessage,
@@ -413,7 +488,7 @@ public abstract class Dungeon extends YamlConfig {
                 this.leavePlayer(player, DungeonLeaveReason.GAME_STOP, false);
             });
 
-            this.scoreboard.onGameStop();
+            this.scoreboard.onDungeonStop();
             this.cleanEntities();
 
             try {
@@ -431,13 +506,21 @@ public abstract class Dungeon extends YamlConfig {
             }
 
              */
+            SchematicManager.resetToAir(this);
 
         } finally {
             this.state = DungeonState.STOPPED;
-            this.players.clear();
+            this.playerCaches.clear();
             this.stopping = false;
 
             Common.log("Stopped dungeon " + this.getName());
+        }
+    }
+
+    private void onDungeonCreationSuccess(Dungeon dungeon, DungeonParty party) {
+        for (PlayerCache caches : dungeon.getPlayerCaches()) {
+            caches.setCurrentDungeonName(dungeon.getName());
+            caches.setCurrentDungeonMode(DungeonJoinMode.PLAYING);
         }
     }
 
@@ -457,102 +540,45 @@ public abstract class Dungeon extends YamlConfig {
 
     public final boolean joinPlayer(final Player player, final DungeonJoinMode mode) {
         final PlayerCache cache = PlayerCache.from(player);
-
         if (!this.canJoin(player, mode)) {
             return false;
         }
-
         cache.setJoining(true);
-
         try {
-
             cache.clearTags();
-
             if (mode != DungeonJoinMode.EDITING) {
-
                 cache.setPlayerTag("PreviousLocation", player.getLocation());
-
-                PlayerUtil.storeState(player);
-
+                //PlayerUtil.storeState(player);
+                PlayerHealthHandler.worldChangeHealthGenerator(player, 40);
                 this.teleport(player, this.lobbyLocation);
-
+                //PlayerHealthHandler.updatePlayerDungeonMaxHealth(player, true);
                 cache.setPlayerTag("AllowGamemodeChange", true);
-                PlayerUtil.normalize(player, true);
+                //PlayerUtil.normalize(player, true);
                 cache.removePlayerTag("AllowGamemodeChange");
             }
-
             try {
                 this.onDungeonJoin(player, mode);
-
             } catch (final Throwable t) {
                 Common.error(t, "Failed to properly handle " + player.getName() + " joining the dungeon " + this.getName() + ", aborting");
-
                 return false;
             }
-
             cache.setCurrentDungeonMode(mode);
             cache.setCurrentDungeonName(this.getName());
-
-            this.players.add(cache);
-
+            this.playerCaches.add(cache);
             // Start countdown and change game mode
-            if (this.state == DungeonState.STOPPED)
-                if (mode == DungeonJoinMode.EDITING) {
-                    Valid.checkBoolean(!this.startCountdown.isRunning(), "Dungeon start countdown already running for " + getName());
-
-                    this.state = DungeonState.EDITED;
-                    this.scoreboard.onEditStart();
-
-                    this.onDungeonEditStart();
-
-                } else {
-                    Valid.checkBoolean(!this.startCountdown.isRunning(), "Dungeon start countdown already running for " + this.getName());
-
-                    this.state = DungeonState.LOBBY;
-                    this.scoreboard.onLobbyStart();
-
-                    /*
-                    if (!Settings.AutoMode.ENABLED)
-                        this.startCountdown.launch();
-
-                    this.onDungeonLobbyStart();
-
-                    if (this.destruction) {
-                        if (this.restoreWorld)
-                            DungeonWorldManager.disableAutoSave(this);
-
-                        else if (this.canRestoreRegion())
-                            DungeonWorldManager.saveRegion(this);
-                    }
-
-                     */
-                }
-
-            Messenger.success(player, "You are now " + mode.toString().toLowerCase() + " dungeon '" + this.getName() + "'!");
-
-            if (this.isLobby()) {
-                this.broadcast("&6" + player.getName() + " &7has joined the dungeon! (" + this.players.size() + "/" + 5 + ")");
-/*
-                if (this.getPlayers(DungeonJoinMode.PLAYING).size() >= 0 && Settings.AutoMode.ENABLED) {
-                    this.startCountdown.launch();
-
-                    this.forEachPlayerInAllModes(otherPlayer -> Remain.sendTitle(otherPlayer,
-                            "",
-                            "&eDungeon Starts In " + Common.plural(this.startCountdown.getTimeLeft(), "second")));
-                }
-
- */
+            if (this.state == DungeonState.STOPPED) {
+                this.state = DungeonState.LOBBY;
+                this.onDungeonLobbyStart();
             }
-
+            Messenger.success(player, "You are now " + mode.toString().toLowerCase() + " dungeon '" + this.getName() + "'!");
             this.scoreboard.onPlayerJoin(player);
-
             if (mode == DungeonJoinMode.SPECTATING)
                 this.transformToSpectate(player);
-
             this.checkIntegrity();
-
         } finally {
+            DungeonFunctions.refreshPlayer(player);
             cache.setJoining(false);
+            cache.setReady(cache.isAutoReady());
         }
         return true;
     }
@@ -561,16 +587,14 @@ public abstract class Dungeon extends YamlConfig {
         final PlayerCache cache = PlayerCache.from(player);
 
         if (cache.getCurrentDungeon() != null) {
-            Messenger.error(player, "You are already joined in dungeon '" + cache.getCurrentDungeonName() + "'.");
-
+            Messenger.error(player, "You are already in dungeon '" + cache.getCurrentDungeonName() + "'.");
             return false;
         }
 
-        /*
         // Perhaps admins joining another player into an game?
         if (player.isDead()) {
             if (Settings.AutoMode.ENABLED) {
-                Remain.respawn(player);
+                //Remain.respawn(player);
             }
             else {
                 Messenger.error(player, "You cannot join dungeon '" + this.getName() + "' while you are dead.");
@@ -578,19 +602,10 @@ public abstract class Dungeon extends YamlConfig {
             }
         }
 
-        if (!Settings.AutoMode.ENABLED) {
-            if (mode != DungeonJoinMode.EDITING && (player.isFlying() || player.getFallDistance() > 0)) {
-                Messenger.error(player, "You cannot join dungeon '" + this.getName() + "' while you are flying.");
-                return false;
-            }
+        if (mode != DungeonJoinMode.EDITING && player.getFireTicks() > 0) {
+            player.setFireTicks(0);
 
-            if (mode != DungeonJoinMode.EDITING && player.getFireTicks() > 0) {
-                Messenger.error(player, "You cannot join dungeon '" + this.getName() + "' while you are burning.");
-                return false;
-            }
         }
-
-         */
 
         if (this.state == DungeonState.EDITED && mode != DungeonJoinMode.EDITING) {
             Messenger.error(player, "You cannot join dungeon '" + this.getName() + "' for play while it is being edited.");
@@ -602,13 +617,12 @@ public abstract class Dungeon extends YamlConfig {
             return false;
         }
 
-        if (this.state != DungeonState.PLAYED && mode == DungeonJoinMode.SPECTATING) {
+        if (((this.state != DungeonState.PLAYED) && this.state != DungeonState.BOSS) && mode == DungeonJoinMode.SPECTATING) {
             Messenger.error(player, "Only dungeons that are being played may be spectated.");
             return false;
         }
 
         if (this.state == DungeonState.PLAYED && mode == DungeonJoinMode.PLAYING) {
-            Messenger.error(player, "This dungeon has already started. Type '/dungeon spectate " + this.getName() + "' to observe.");
             return false;
         }
 
@@ -617,7 +631,7 @@ public abstract class Dungeon extends YamlConfig {
             return false;
         }
 
-        if (mode == DungeonJoinMode.PLAYING && this.players.size() >= 5) {
+        if (mode == DungeonJoinMode.PLAYING && this.playerCaches.size() >= 5) {
             Messenger.error(player, "Dungeon '" + this.getName() + "' is full (" + 5 + " players)!");
             return false;
         }
@@ -638,74 +652,54 @@ public abstract class Dungeon extends YamlConfig {
 
     private void leavePlayer(Player player, DungeonLeaveReason leaveReason, boolean stopIfLast) {
         final PlayerCache cache = PlayerCache.from(player);
-
         Valid.checkBoolean(!this.isStopped(), "Cannot leave player " + player.getName() + " from stopped dungeon!");
         Valid.checkBoolean(cache.hasDungeon() && cache.getCurrentDungeon().equals(this), "Player " + player.getName() + " is not joined in dungeon " + this.getName());
-
         cache.setLeaving(true);
-
-        if (!this.getPlayers(DungeonJoinMode.PLAYING).isEmpty() && leaveReason.autoSpectateOnLeave() && this.canSpectateOnLeave(player)) {
+        if (!this.getPlayerCaches(DungeonJoinMode.PLAYING).isEmpty() && leaveReason.autoSpectateOnLeave() && this.canSpectateOnLeave(player)) {
             cache.setLeaving(false);
-
             this.transformToSpectate(player);
             this.onDungeonSpectate(player);
             this.broadcast("&6" + player.getName() + " &7has lost the dungeon and is now spectating!");
-
         } else {
-
             try {
                 this.scoreboard.onPlayerLeave(player);
-
                 // If onLeave uses players then move it below because this player will be removed at the point of calling onLeave!
-                this.players.remove(cache);
-
                 try {
                     this.onDungeonLeave(player);
-
                 } catch (final Throwable t) {
                     Common.error(t, "Failed to properly handle " + player.getName() + " leaving dungeon " + this.getName() + ", stopping for safety");
-
                     if (!this.isStopped()) {
                         stop(DungeonStopReason.ERROR);
-
                         return;
                     }
                 }
-
                 if (!this.isEdited()) {
                     final Location previousLocation = cache.getPlayerTag("PreviousLocation");
                     Valid.checkNotNull(previousLocation, "Unable to locate previous location for player " + player.getName());
-
-                    PlayerUtil.normalize(player, true);
-
+                    //PlayerUtil.normalize(player, true);
                     Location respawnLocation = previousLocation;
-
                     if (Dungeon.findByLocation(previousLocation) != null && this.returnBackLocation != null)
                         respawnLocation = this.returnBackLocation;
-
                     this.teleportToReturnLocation(player, respawnLocation);
-
                     Common.runLater(2, () -> {
                         cache.setPlayerTag("AllowGamemodeChange", true);
-                        PlayerUtil.restoreState(player);
+                        //PlayerUtil.restoreState(player);
                         cache.removePlayerTag("AllowGamemodeChange");
                     });
                 }
-
                 // If we are not stopping, remove from the map automatically
-                if (this.getPlayers(DungeonJoinMode.PLAYING).isEmpty() && stopIfLast)
+                if (this.getPlayerCaches(DungeonJoinMode.PLAYING).isEmpty() && stopIfLast)
                     this.stop(DungeonStopReason.LAST_PLAYER_LEFT);
-
                 if (!this.stopping)
                     Messenger.success(player, "You've left " + cache.getCurrentDungeonMode().toString().toLowerCase() + " the dungeon '" + this.getName() + "'!");
-
                 if (cache.getCurrentDungeonMode() != DungeonJoinMode.SPECTATING)
-                    this.broadcast("&6" + player.getName() + " &7has left the dungeon! (" + this.getPlayers(DungeonJoinMode.PLAYING).size() + "/" + 5 + ")");
-
+                    this.broadcast("&6" + player.getName() + " &7has left the dungeon! (" + this.getPlayerCaches(DungeonJoinMode.PLAYING).size() + "/" + 5 + ")");
+                this.playerCaches.remove(cache);
             } finally {
                 cache.setLeaving(false);
                 cache.setCurrentDungeonMode(null);
                 cache.setCurrentDungeonName(null);
+                DungeonFunctions.refreshPlayer(player);
                 cache.clearTags();
             }
         }
@@ -734,7 +728,7 @@ public abstract class Dungeon extends YamlConfig {
     }
 
     protected boolean canSpectateOnLeave(Player player) {
-        return this.getPlayers(DungeonJoinMode.PLAYING).size() > 1;
+        return this.getPlayerCaches(DungeonJoinMode.PLAYING).size() > 1;
     }
 
     protected void transformToSpectate(Player player) {
@@ -743,7 +737,7 @@ public abstract class Dungeon extends YamlConfig {
         cache.setCurrentDungeonMode(DungeonJoinMode.SPECTATING);
 
         // Normalize once again, clearing all items
-        PlayerUtil.normalize(player, true);
+       // PlayerUtil.normalize(player, true);
 
         // Set invisibility
         forEachPlayerInAllModes(other -> other.hidePlayer(player));
@@ -1031,7 +1025,7 @@ public abstract class Dungeon extends YamlConfig {
      * Run a function for each players having the given mode
      */
     protected final void forEachPlayer(final Consumer<Player> consumer, final DungeonJoinMode mode) {
-        for (final PlayerCache player : this.getPlayers(mode))
+        for (final PlayerCache player : this.getPlayerCaches(mode))
             consumer.accept(player.toPlayer());
     }
 
@@ -1040,12 +1034,12 @@ public abstract class Dungeon extends YamlConfig {
     }
 
     protected final void forEach(final Consumer<PlayerCache> consumer, final DungeonJoinMode mode) {
-        for (final PlayerCache player : this.getPlayers(mode))
+        for (final PlayerCache player : this.getPlayerCaches(mode))
             consumer.accept(player);
     }
 
     public final boolean isJoined(Player player) {
-        for (final PlayerCache otherCache : this.players)
+        for (final PlayerCache otherCache : this.playerCaches)
             if (otherCache.getUniqueId().equals(player.getUniqueId())) {
                 return true;
             }
@@ -1053,7 +1047,7 @@ public abstract class Dungeon extends YamlConfig {
     }
 
     public final boolean isJoined(PlayerCache cache) {
-        return this.players.contains(cache);
+        return this.playerCaches.contains(cache);
     }
 
     public final List<Player> getBukkitPlayersInAllModes() {
@@ -1061,16 +1055,16 @@ public abstract class Dungeon extends YamlConfig {
     }
 
     public final List<Player> getBukkitPlayers(final DungeonJoinMode mode) {
-        return Common.convert(this.getPlayers(mode), PlayerCache::toPlayer);
+        return Common.convert(this.getPlayerCaches(mode), PlayerCache::toPlayer);
     }
 
     public final List<PlayerCache> getPlayersInAllModes() {
-        return Collections.unmodifiableList(this.players.getSource());
+        return Collections.unmodifiableList(this.playerCaches.getSource());
     }
 
-    public final List<PlayerCache> getPlayers(@Nullable final DungeonJoinMode mode) {
+    public final List<PlayerCache> getPlayerCaches(@Nullable final DungeonJoinMode mode) {
         final List<PlayerCache> foundPlayers = new ArrayList<>();
-        for (final PlayerCache otherCache : this.players)
+        for (final PlayerCache otherCache : this.playerCaches)
             if (!otherCache.isLeaving() && (mode == null || (otherCache.hasDungeon() && otherCache.getCurrentDungeonMode() == mode))) {
                 foundPlayers.add(otherCache);
             }
@@ -1079,7 +1073,7 @@ public abstract class Dungeon extends YamlConfig {
 
     public final PlayerCache findPlayer(final Player player) {
         this.checkIntegrity();
-        for (final PlayerCache otherCache : this.players) {
+        for (final PlayerCache otherCache : this.playerCaches) {
             if (otherCache.hasDungeon() && otherCache.getCurrentDungeon().equals(this) && otherCache.getUniqueId().equals(player.getUniqueId()))
                 return otherCache;
         }
@@ -1104,10 +1098,10 @@ public abstract class Dungeon extends YamlConfig {
     private void checkIntegrity() {
 
         if (this.state == DungeonState.STOPPED)
-            Valid.checkBoolean(this.players.isEmpty(), "Found players in stopped " + this.getName() + " dungeon: " + this.players);
+            Valid.checkBoolean(this.playerCaches.isEmpty(), "Found players in stopped " + this.getName() + " dungeon: " + this.playerCaches);
         int playing = 0, editing = 0, spectating = 0;
 
-        for (final PlayerCache cache : this.players) {
+        for (final PlayerCache cache : this.playerCaches) {
             final Player player = cache.toPlayer();
             final DungeonJoinMode mode = cache.getCurrentDungeonMode();
 
@@ -1170,6 +1164,14 @@ public abstract class Dungeon extends YamlConfig {
                 return dungeon;
 
         return null;
+    }
+
+    public ArrayList<Player> getPlayersFromCaches(StrictList<PlayerCache> caches) {
+        ArrayList<Player> players = new ArrayList<>();
+        for (PlayerCache cache : caches) {
+            players.add(cache.toPlayer());
+        }
+        return players;
     }
 
     public static Dungeon findByPlayer(final Player player) {

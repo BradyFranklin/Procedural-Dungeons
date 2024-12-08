@@ -51,7 +51,7 @@ public class NPCMobSystem {
                 .baseSpeed(1.5F)
                 .updatePathRate(4 * 20);
 
-        CompMetadata.setMetadata(entity, "Citizens-Boss");
+        CompMetadata.setMetadata(entity, "Citizens-Boss", "Crypt Zombie");
 
     }
 

@@ -1,4 +1,4 @@
-package org.ninenetwork.infinitedungeons.item;
+package org.ninenetwork.infinitedungeons.item.tool;
 
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -8,7 +8,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.mineacademy.fo.menu.model.ItemCreator;
 import org.mineacademy.fo.remain.CompMaterial;
-import org.mineacademy.fo.visual.VisualTool;
 import org.mineacademy.fo.visual.VisualizedRegion;
 import org.ninenetwork.infinitedungeons.PlayerCache;
 

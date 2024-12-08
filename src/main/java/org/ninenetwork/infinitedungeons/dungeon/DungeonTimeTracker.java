@@ -1,11 +1,8 @@
-package org.ninenetwork.infinitedungeons.task;
+package org.ninenetwork.infinitedungeons.dungeon;
 
 import lombok.Getter;
-import org.mineacademy.fo.Common;
 import org.mineacademy.fo.model.Countdown;
 import org.mineacademy.fo.model.SimpleTime;
-import org.ninenetwork.infinitedungeons.dungeon.Dungeon;
-import org.ninenetwork.infinitedungeons.dungeon.DungeonStopReason;
 
 public class DungeonTimeTracker extends Countdown {
 

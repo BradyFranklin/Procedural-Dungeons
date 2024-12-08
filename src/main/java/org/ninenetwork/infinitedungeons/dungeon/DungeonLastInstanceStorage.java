@@ -6,6 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.mineacademy.fo.Common;
 import org.mineacademy.fo.Valid;
+import org.mineacademy.fo.constants.FoConstants;
 import org.mineacademy.fo.settings.ConfigItems;
 import org.mineacademy.fo.settings.YamlConfig;
 
@@ -13,6 +14,7 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Getter
 public final class DungeonLastInstanceStorage extends YamlConfig {
@@ -23,10 +25,11 @@ public final class DungeonLastInstanceStorage extends YamlConfig {
 
     private Location location;
 
-    private DungeonLastInstanceStorage(String name, @Nullable Location location) {
-        this.name = name;
+    private DungeonLastInstanceStorage(Dungeon dungeon, @Nullable Location location) {
+        this.name = dungeon.getName();
         this.location = location;
-        loadConfiguration(NO_DEFAULT, "DungeonStorage/InstanceTracker/" + name + ".yml");
+        this.setPathPrefix("Dungeons." + dungeon.getName());
+        this.loadConfiguration(NO_DEFAULT, FoConstants.File.DATA);
     }
 
     @Override
@@ -48,8 +51,8 @@ public final class DungeonLastInstanceStorage extends YamlConfig {
         return this.location.clone();
     }
 
-    public static DungeonLastInstanceStorage addDungeonInstanceCenter(@NonNull final String name, @NonNull final Location location) {
-        return loadedInstances.loadOrCreateItem(name, () -> new DungeonLastInstanceStorage(name,location));
+    public static DungeonLastInstanceStorage addDungeonInstanceCenter(@NonNull final Dungeon dungeon, @NonNull final Location location) {
+        return loadedInstances.loadOrCreateItem(dungeon.getName(), () -> new DungeonLastInstanceStorage(dungeon,location));
     }
 
     public static void loadLocations() {

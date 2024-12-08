@@ -1,4 +1,4 @@
-package org.ninenetwork.infinitedungeons.command.tests;
+package org.ninenetwork.infinitedungeons.menu;
 
 import org.mineacademy.fo.menu.MenuTools;
 import org.ninenetwork.infinitedungeons.item.tool.EssenceSecretTool;
@@ -8,7 +8,7 @@ import org.ninenetwork.infinitedungeons.item.tool.BlessingSecretTool;
 
 public class ToolsMenu extends MenuTools {
 
-    ToolsMenu() {
+    public ToolsMenu() {
         this.setTitle("Tools Menu");
     }
 

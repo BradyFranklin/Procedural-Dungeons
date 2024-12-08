@@ -1,37 +1,36 @@
 package org.ninenetwork.infinitedungeons.classes;
 
-import org.bukkit.inventory.ItemStack;
-import org.mineacademy.fo.collection.SerializedMap;
-import org.mineacademy.fo.model.ConfigSerializable;
+import org.bukkit.entity.Player;
 
-import java.lang.reflect.Array;
 import java.util.*;
 
-public abstract class DungeonClass {
+public abstract class DungeonClassTemp {
 
-    private static final Map<String, DungeonClass> byName = new LinkedHashMap<>();
+    private static final Map<String, DungeonClassTemp> byName = new LinkedHashMap<>();
 
-    public static DungeonClass MAGE = new Mage();
-    public static DungeonClass HEALER = new Healer();
-    public static DungeonClass ARCHER = new Archer();
-    public static DungeonClass BERSERK = new Berserk();
-    public static DungeonClass TANK = new Tank();
+    public static DungeonClassTemp MAGE = new Mage();
+    public static DungeonClassTemp HEALER = new Healer();
+    public static DungeonClassTemp ARCHER = new Archer();
+    public static DungeonClassTemp BERSERK = new Berserk();
+    public static DungeonClassTemp TANK = new Tank();
 
     private final String name;
-    private final List<DungeonClassAbility> abilities;
 
-    public DungeonClass(String name, ArrayList<DungeonClassAbility> abilities) {
+    public DungeonClassTemp(String name) {
         this.name = name;
-        this.abilities = abilities;
 
         byName.put(name, this);
     }
 
-    public static DungeonClass getByName(String className) {
+    public int getLevel(Player player) {
+        return 0;
+    }
+
+    public static DungeonClassTemp getByName(String className) {
         return byName.get(className);
     }
 
-    public static Collection<DungeonClass> getClasses() {
+    public static Collection<DungeonClassTemp> getClasses() {
         return byName.values();
     }
 

@@ -2,5 +2,6 @@ name: ${project.name}
 version: ${project.version}
 main: ${main.class}
 author: InfinityFactions
+softdepend: [Multiverse-Core, Sentinel]
 
 api-version: 1.13

@@ -51,7 +51,7 @@ public class CryptZombies extends Zombie {
 
         final Entity bukkitEntity = getBukkitEntity();
         LivingEntity livingEntity = (LivingEntity) bukkitEntity;
-        bukkitEntity.setCustomName(Common.colorize(DungeonMobUtil.getEntityDefaultNametag(livingEntity, "Crypt Zombie", "#F1FC01", "#FDBA40")));
+        //bukkitEntity.setCustomName(Common.colorize(DungeonMobUtil.getEntityDefaultNametag(livingEntity, "Crypt Zombie", "#F1FC01", "#FDBA40", 100)));
         bukkitEntity.setCustomNameVisible(true);
 
         this.setItemSlot(EquipmentSlot.FEET, new net.minecraft.world.item.ItemStack(Items.LEATHER_BOOTS));
